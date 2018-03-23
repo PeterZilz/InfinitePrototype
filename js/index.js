@@ -4,7 +4,7 @@ function onCanvasResize(event)
 {
     /** @type {HTMLCanvasElement} */
     var canvas = document.getElementById("playfield");
-    canvas.style.height = (canvas.clientWidth / 2)+"px";
+    canvas.style.height = Math.floor(canvas.clientWidth / 2)+"px";
 }
 
 /**
@@ -17,7 +17,7 @@ function onPlayfieldMouseUp(event)
     /** @type {HTMLCanvasElement} */
     var canvas = document.getElementById("playfield");
 
-    let newDest = unclip(event.offsetX, event.offsetY, canvas.clientWidth,canvas.clientHeight, 10, 5, 0, 0);
+    let newDest = unclip(event.offsetX, event.offsetY, canvas.clientWidth,canvas.clientHeight, 10, 5, world.ego.x, world.ego.y);
 
     world.ego.destination = newDest;
 
@@ -41,10 +41,12 @@ function takeStep()
     /** @type {HTMLCanvasElement} */
     var canvas = document.getElementById("playfield");
     canvas.width = canvas.clientWidth;
-    canvas.style.height = (canvas.clientWidth / 2)+"px";
-    canvas.height = canvas.clientWidth / 2;
+    if(canvas.clientWidth % 2 == 1)
+        canvas.width--;
+    canvas.style.height = Math.floor(canvas.width / 2)+"px";
+    canvas.height = Math.floor(canvas.width / 2);
     var context = canvas.getContext("2d");
-    renderWorld(context, canvas.width, canvas.height, 10, 5, 0, 0);
+    renderWorld(context, canvas.width, canvas.height, 10, 5, world.ego.x, world.ego.y);
 
     requestAnimationFrame(takeStep);
 }
@@ -101,8 +103,10 @@ document.addEventListener("DOMContentLoaded", function pageInit(event){
 
 
     canvas.width = canvas.clientWidth;
-    canvas.style.height = (canvas.clientWidth / 2)+"px";
-    canvas.height = canvas.clientWidth / 2;
+    if(canvas.clientWidth % 2 == 1)
+        canvas.width--;
+    canvas.style.height = Math.floor(canvas.width / 2)+"px";
+    canvas.height = Math.floor(canvas.width / 2);
     var context = canvas.getContext("2d");
     
     renderWorld(context, canvas.width, canvas.height, 10, 5, 0, 0);
