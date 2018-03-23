@@ -1,0 +1,15 @@
+{
+    "short_name": "Art",
+    "name": "Art Generator",
+    "background_color": "#202020",
+    "theme_color": "#202020",
+    "display": "standalone",
+    "icons": [
+        {
+            "src": "favicon96.png",
+            "type": "image/png",
+            "sizes": "96x96"
+        }
+    ],
+    "start_url": "index.html"
+}
