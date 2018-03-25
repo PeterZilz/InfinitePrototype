@@ -86,4 +86,19 @@ class Wall
             this.boundingBox.maxY < bottom
         );
     }
+
+    /**
+     * Checks if coordinate is inside the bounding box
+     * @param {number} x 
+     * @param {number} y 
+     */
+    isInsideBoundingBox(x, y)
+    {
+        return (
+            this.boundingBox.minX <= x &&
+            this.boundingBox.maxX >= x &&
+            this.boundingBox.minY <= y &&
+            this.boundingBox.maxY >= y
+        );
+    }
 }

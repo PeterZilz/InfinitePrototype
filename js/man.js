@@ -2,12 +2,21 @@
 
 class Man
 {
+    /**
+     * Creates new instance of a Man.
+     * @param {number} x x-coordinate of position
+     * @param {number} y y-coordinate of position
+     * @param {string} color color of the man as CSS color string
+     */
     constructor(x,y,color)
     {
+        /** @type {number} */
         this.x = x!=null ? x : 0;
+        /** @type {number} */
         this.y = y!=null ? y : 0;
         this.color = color != null ? color : "#00A83E";
 
+        /** @type {number[]} */
         this.destination = null;
     }
 

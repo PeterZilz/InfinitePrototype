@@ -1,3 +1,6 @@
+///<reference path="background.js" />
+///<reference path="man.js" />
+
 "use strict";
 
 function onCanvasResize(event)
@@ -36,7 +39,23 @@ function takeStep()
         return;
     }
 
+    let previousPosition = [world.ego.x, world.ego.y];
+
     world.ego.stepTowardsDestination();
+
+    // validate current position. 
+    // Technically checking only the bounding box is not correct.
+    // But for the Labyrinth it works.
+    if(world.walls.some(w => w.isInsideBoundingBox(world.ego.x, world.ego.y))){
+        // If invalid delete destination 
+        // and reset to previous position
+        // and stop animation.
+        world.ego.destination = null;
+        world.ego.x = previousPosition[0];
+        world.ego.y = previousPosition[1];
+        isAnimationRunning = false;
+        return;
+    }
 
     /** @type {HTMLCanvasElement} */
     var canvas = document.getElementById("playfield");
@@ -57,22 +76,7 @@ var isAnimationRunning = false;
 var world = {
     ego: new Man(0,0),
     background: new Background(),
-    walls: [
-        new Wall([
-            [-0.8,2],
-            [-4,2],
-            [-4,-2],
-            [4,-2],
-            [4,2],
-            [0.8,2],
-            [0.8,1.5],
-            [3.5,1.5],
-            [3.5,-1.5],
-            [-3.5,-1.5],
-            [-3.5,1.5],
-            [-0.8,1.5]
-        ])
-    ]
+    walls: new Labyrinth(20,20).getWalls()
 };
 
 /**
