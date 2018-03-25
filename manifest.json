@@ -4,6 +4,7 @@
     "background_color": "#202020",
     "theme_color": "#202020",
     "display": "standalone",
+    "orientation": "landscape",
     "icons": [
         {
             "src": "favicon32.png",
