@@ -3,24 +3,22 @@
 
 "use strict";
 
-function onCanvasResize(event)
-{
-    /** @type {HTMLCanvasElement} */
-    var canvas = document.getElementById("playfield");
-    canvas.style.height = Math.floor(canvas.clientWidth / 2)+"px";
-}
-
 /**
  * 
  * @param {MouseEvent} event 
  */
 function onPlayfieldMouseUp(event)
 {
-
-    /** @type {HTMLCanvasElement} */
-    var canvas = document.getElementById("playfield");
-
-    let newDest = unclip(event.offsetX, event.offsetY, canvas.clientWidth,canvas.clientHeight, 10, 5, world.ego.x, world.ego.y);
+    let [relX, relY] = calculateRanges(canvas.clientWidth, canvas.clientHeight);
+    let newDest = unclip(
+        event.offsetX, 
+        event.offsetY, 
+        canvas.clientWidth,
+        canvas.clientHeight, 
+        world.baseRange * relX, 
+        world.baseRange * relY, 
+        world.ego.x, 
+        world.ego.y);
 
     world.ego.destination = newDest;
 
@@ -57,15 +55,11 @@ function takeStep()
         return;
     }
 
-    /** @type {HTMLCanvasElement} */
-    var canvas = document.getElementById("playfield");
     canvas.width = canvas.clientWidth;
-    if(canvas.clientWidth % 2 == 1)
-        canvas.width--;
-    canvas.style.height = Math.floor(canvas.width / 2)+"px";
-    canvas.height = Math.floor(canvas.width / 2);
+    canvas.height = canvas.clientHeight;
+    let [relX, relY] = calculateRanges(canvas.width, canvas.height);
     var context = canvas.getContext("2d");
-    renderWorld(context, canvas.width, canvas.height, 10, 5, world.ego.x, world.ego.y);
+    renderWorld(context, canvas.width, canvas.height, world.baseRange * relX, world.baseRange * relY, world.ego.x, world.ego.y);
 
     requestAnimationFrame(takeStep);
 }
@@ -74,10 +68,14 @@ function takeStep()
 var isAnimationRunning = false;
 
 var world = {
-    ego: new Man(0,0),
+    baseRange: 10,
+    ego: new Man(1,0),
     background: new Background(),
     walls: new Labyrinth(20,20).getWalls()
 };
+
+/** @type {HTMLCanvasElement} */
+var canvas;
 
 /**
  * Renders the all things on the given context.
@@ -95,23 +93,25 @@ function renderWorld(context, width, height, rangeX, rangeY, offsetX, offsetY){
     world.ego.render(context, width, height, rangeX, rangeY, offsetX, offsetY);
 }
 
-document.addEventListener("DOMContentLoaded", function pageInit(event){
+function calculateRanges(width, height)
+{
+    if(width > height)
+        return [1, height/width];
+    else
+        return [width/height, 1];
+}
 
-    window.addEventListener("resize", onCanvasResize);
-    
-    onCanvasResize(null);
+document.addEventListener("DOMContentLoaded", function pageInit(event){
     
     /** @type {HTMLCanvasElement} */
-    var canvas = document.getElementById("playfield");
+    canvas = document.getElementById("playfield");
     canvas.addEventListener("mouseup", onPlayfieldMouseUp);
 
 
     canvas.width = canvas.clientWidth;
-    if(canvas.clientWidth % 2 == 1)
-        canvas.width--;
-    canvas.style.height = Math.floor(canvas.width / 2)+"px";
-    canvas.height = Math.floor(canvas.width / 2);
-    var context = canvas.getContext("2d");
+    canvas.height = canvas.clientHeight;
+    let [relX, relY] = calculateRanges(canvas.width, canvas.height);
+    let context = canvas.getContext("2d");
     
-    renderWorld(context, canvas.width, canvas.height, 10, 5, 0, 0);
+    renderWorld(context, canvas.width, canvas.height, world.baseRange * relX, world.baseRange * relY, world.ego.x, world.ego.y);
 });

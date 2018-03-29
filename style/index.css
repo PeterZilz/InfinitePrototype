@@ -1,23 +1,17 @@
+html {
+    height: 99%;
+}
+
 body {
     font-family: Arial, Helvetica, sans-serif;
     background: #202020;
     color: rgb(207, 207, 207);
     margin: 0;
-}
-
-#main{
-    /* margin: auto; */
-    box-sizing: border-box;
-    width: 75%;
-    margin-left: 12.5%;
-    margin-right: 12.5%;
-}
-
-#main h2 {
-    margin: auto;
+    height: 100%;
 }
 
 canvas {
-    border: 1px solid #003f72;
     width: 100%;
+    height: 100%;
 }
+
