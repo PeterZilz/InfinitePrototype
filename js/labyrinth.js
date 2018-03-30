@@ -34,9 +34,13 @@ class Labyrinth
         this.tiles = tiles;
     }
 
-
+    /**
+     * Generates wall objects from the internal representation of the labyrinth.
+     * @returns {Wall[]}
+     */
     getWalls()
     {
+        /** @type {Wall[]} */
         let wallList = [];
 
         let top = this.tiles.length/2;

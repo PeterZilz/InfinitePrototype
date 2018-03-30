@@ -20,30 +20,10 @@ class Man
         this.destination = null;
     }
 
-
     /**
-     * Renders the man on the given context.
-     * @param {CanvasRenderingContext2D} context pane to render to
-     * @param {number} width width in pixels
-     * @param {number} height height in pixels
-     * @param {number} rangeX width in coordinates
-     * @param {number} rangeY height in coordinates
-     * @param {number} offsetX x-coordinate of the center of the image
-     * @param {number} offsetY y-coordinate of the center of the image
+     * Determines if this entity has reached its destination.
+     * @returns {boolean} false - if another step has to be taken.
      */
-    render(context, width, height, rangeX, rangeY, offsetX, offsetY)
-    {
-        let m = clip(this.x, this.y, width, height, rangeX, rangeY, offsetX, offsetY);
-
-        // TODO make radius dependent on the clip function.
-        
-        context.beginPath();
-        context.fillStyle = this.color;
-        context.arc(m[0],m[1], 10, 0, 2*Math.PI);
-        context.fill();
-        context.closePath();
-    }
-
     isAtDestination()
     {
         if(this.destination == null) 
@@ -60,6 +40,9 @@ class Man
         }
     }
 
+    /**
+     * Moves this entity one step towards the current destination.
+     */
     stepTowardsDestination()
     {
         if(this.isAtDestination()) 

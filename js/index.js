@@ -1,5 +1,9 @@
-///<reference path="background.js" />
-///<reference path="man.js" />
+///<reference path="./render-utils.js" />
+///<reference path="./background.js" />
+///<reference path="./man.js" />
+///<reference path="./wall.js" />
+///<reference path="./labyrinth.js" />
+///<reference path="./canvas-renderer.js" />
 
 "use strict";
 
@@ -88,9 +92,9 @@ var canvas;
  * @param {number} offsetY y-coordinate of the center of the image
  */
 function renderWorld(context, width, height, rangeX, rangeY, offsetX, offsetY){
-    world.background.render(context, width, height, rangeX, rangeY, offsetX, offsetY);
-    world.walls.forEach(w => w.render(context, width, height, rangeX, rangeY, offsetX, offsetY));
-    world.ego.render(context, width, height, rangeX, rangeY, offsetX, offsetY);
+    renderBackground(world.background, context, width, height, rangeX, rangeY, offsetX, offsetY);
+    world.walls.forEach(w => renderWall(w, context, width, height, rangeX, rangeY, offsetX, offsetY));
+    renderMan(world.ego, context, width, height, rangeX, rangeY, offsetX, offsetY);
 }
 
 function calculateRanges(width, height)
