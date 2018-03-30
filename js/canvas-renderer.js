@@ -39,7 +39,7 @@ function renderBackground(background, context, width, height, rangeX, rangeY, of
     
     // render tiles of the other color
     context.fillStyle = background.color1String;
-    for(let x = minX;x<maxX;x+=2)
+    for(let x = minX;x<=maxX;x+=2)
     {
         for(let y = minY, j=0;y<=maxY;y++,j++){
             let [px, py] = clip(x+((minX+minY+j)%2),y,width,height,rangeX,rangeY,offsetX,offsetY);

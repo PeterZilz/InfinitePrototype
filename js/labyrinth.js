@@ -1,4 +1,5 @@
 ///<reference path="wall.js" />
+///<reference path="./action-panel.js" />
 
 "use strict";
 
@@ -12,6 +13,12 @@ class Labyrinth
      */
     constructor(tilesX, tilesY)
     {
+        /**
+         * A checkerd matrix of booleans.
+         * The values tell if there is a gateway between two tiles or not.
+         * null values represent the tiles.
+         * @type {boolean[][]}
+         */
         let tiles = [];
         for(let j=0;j<tilesY*2+1;j++){
             tiles.push(new Array(tilesX*2+1));
@@ -23,6 +30,7 @@ class Labyrinth
                     tiles[j][i] = null;
                     continue;
                 }
+                // make sure, there is no way out of the labyrinth:
                 if(i==0 || i==tiles[j].length-1 || j==0 || j==tiles.length-1){
                     tiles[j][i] = false;
                     continue;
@@ -32,6 +40,44 @@ class Labyrinth
         }
 
         this.tiles = tiles;
+
+
+        // generate positions for the action panels:
+        const percentage = 0.07;
+
+        this.actionPositions = [];
+
+        for(let i=0;i<tilesX*tilesY*percentage;i++)
+        {
+            // this may produce multiple action panel on one tile:
+            this.actionPositions.push([
+                Math.floor(Math.random()*tilesX)*2+1,
+                Math.floor(Math.random()*tilesY)*2+1
+            ]);
+        }
+    }
+
+    /**
+     * Generates AcptionPanel objects from the internal representation.
+     * @returns {ActionPanel[]}
+     */
+    getActionPanels()
+    {
+        let top = this.tiles.length/2;
+        if(((this.tiles.length-1)/2)%2==0) top++;
+        let left = -this.tiles[0].length/2;
+
+        let panels = [];
+        this.actionPositions.forEach(ap => {
+            panels.push(new ActionPanel([
+                [left+ap[0]+0.2,    top-ap[1]-0.2],
+                [left+ap[0]+0.2,    top-ap[1]-0.8],
+                [left+ap[0]+0.8,    top-ap[1]-0.8],
+                [left+ap[0]+0.8,    top-ap[1]-0.2]
+            ]));
+        });
+
+        return panels;
     }
 
     /**

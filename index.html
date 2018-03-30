@@ -17,12 +17,16 @@
     <script type="text/javascript" src="js/render-utils.js"></script>
     <script type="text/javascript" src="js/background.js"></script>
     <script type="text/javascript" src="js/wall.js"></script>
+    <script type="text/javascript" src="js/action-panel.js"></script>
     <script type="text/javascript" src="js/man.js"></script>
     <script type="text/javascript" src="js/labyrinth.js"></script>
     <script type="text/javascript" src="js/canvas-renderer.js"></script>
     <script type="text/javascript" src="js/index.js"></script>
 </head>
 <body>
-    <canvas id="playfield" oncontextmenu="return false;"></canvas>
+    <canvas id="playfield" oncontextmenu="return false;">
+        <span>Sorry this games doesn't work on your device.</span>
+    </canvas>
+    <span id="score">0</span>
 </body>
 </html>
