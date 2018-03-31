@@ -49,7 +49,7 @@ function takeStep()
     // validate current position. 
     // Technically checking only the bounding box is not correct.
     // But for the Labyrinth it works.
-    if(world.walls.some(w => w.isInsideBoundingBox(world.ego.x, world.ego.y))){
+    if(!isGhostActive && world.walls.some(w => w.isInsideBoundingBox(world.ego.x, world.ego.y))){
         // If invalid delete destination 
         // and reset to previous position
         // and stop animation.
@@ -83,6 +83,7 @@ var world = {
     baseRange: 10,
     ego: new Man(1,0),
     background: new Background(),
+    /** @type {Wall[]} */
     walls: null,
     /** @type {ActionPanel[]} */
     actionPanels: null,
@@ -93,6 +94,9 @@ var world = {
 var canvas;
 /** @type {HTMLSpanElement} */
 var spnScore;
+var isGhostActive = false;
+/** @type {HTMLInputElement} */
+var btnGhost;
 
 /**
  * Renders the all things on the given context.
@@ -136,6 +140,55 @@ function updateScore()
     spnScore.classList.add("animCounterIncrease");
 }
 
+/**
+ * Enables or disables the ghost button.
+ * @param {boolean} enabled state of the ghost button
+ */
+function enableGhost(enabled)
+{
+    btnGhost.disabled = !enabled;
+}
+
+function startGhost()
+{
+    isGhostActive = true;
+    // change color of walls
+    world.walls.forEach(w => w.color = "#EEEEEE30");
+    // render if not in animation
+    if(!isAnimationRunning)
+    {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        let [relX, relY] = calculateRanges(canvas.width, canvas.height);
+        var context = canvas.getContext("2d");
+        renderWorld(context, canvas.width, canvas.height, world.baseRange * relX, world.baseRange * relY, world.ego.x, world.ego.y);
+    }
+}
+function endGhost()
+{
+    isGhostActive = false;
+    // change color of walls
+    world.walls.forEach(w => w.color = "#101010");
+    // render if not in animation
+    if(!isAnimationRunning)
+    {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        let [relX, relY] = calculateRanges(canvas.width, canvas.height);
+        var context = canvas.getContext("2d");
+        renderWorld(context, canvas.width, canvas.height, world.baseRange * relX, world.baseRange * relY, world.ego.x, world.ego.y);
+    }
+}
+
+function onclickGhost(event)
+{
+    if(btnGhost.disabled) return;
+    enableGhost(false);
+    startGhost();
+    setTimeout(endGhost, 2000);
+    setTimeout(() => enableGhost(true), 12000);
+}
+
 document.addEventListener("DOMContentLoaded", function pageInit(event){
 
     let lab = new Labyrinth(20,20);
@@ -148,11 +201,17 @@ document.addEventListener("DOMContentLoaded", function pageInit(event){
     canvas.addEventListener("mouseup", onPlayfieldMouseUp);
 
     spnScore = document.getElementById("score");
+    
+    btnGhost = document.getElementById("btnGhost");
+    btnGhost.addEventListener("click", onclickGhost);
+    setTimeout(() => enableGhost(true), 10000);
 
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
     let [relX, relY] = calculateRanges(canvas.width, canvas.height);
     let context = canvas.getContext("2d");
     
-    renderWorld(context, canvas.width, canvas.height, world.baseRange * relX, world.baseRange * relY, world.ego.x, world.ego.y);
+    requestAnimationFrame(
+        () => renderWorld(context, canvas.width, canvas.height, world.baseRange * relX, world.baseRange * relY, world.ego.x, world.ego.y)
+    );
 });
