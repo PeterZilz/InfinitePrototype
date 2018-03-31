@@ -1,8 +1,10 @@
-///<reference path="wall.js" />
+///<reference path="./wall.js" />
 ///<reference path="./action-panel.js" />
 
 "use strict";
 
+/** Percentage of tiles, that will have ActionPanels. */
+const LABYRINTH_ACTION_PERCENTAGE = 0.07;
 
 class Labyrinth
 {
@@ -43,11 +45,9 @@ class Labyrinth
 
 
         // generate positions for the action panels:
-        const percentage = 0.07;
-
         this.actionPositions = [];
 
-        for(let i=0;i<tilesX*tilesY*percentage;i++)
+        for(let i=0;i<tilesX*tilesY*LABYRINTH_ACTION_PERCENTAGE;i++)
         {
             // this may produce multiple action panel on one tile:
             this.actionPositions.push([

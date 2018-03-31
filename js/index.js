@@ -180,18 +180,24 @@ function endGhost()
     }
 }
 
+const GHOST_INITIAL_DELAY = 10000;
+const GHOST_DURATION = 2000;
+const GHOST_COOLDOWN = 10000;
+const LABYRINTH_TILES_X = 20;
+const LABYRINTH_TILES_Y = 20;
+
 function onclickGhost(event)
 {
     if(btnGhost.disabled) return;
     enableGhost(false);
     startGhost();
-    setTimeout(endGhost, 2000);
-    setTimeout(() => enableGhost(true), 12000);
+    setTimeout(endGhost, GHOST_DURATION);
+    setTimeout(() => enableGhost(true), GHOST_DURATION + GHOST_COOLDOWN);
 }
 
 document.addEventListener("DOMContentLoaded", function pageInit(event){
 
-    let lab = new Labyrinth(20,20);
+    let lab = new Labyrinth(LABYRINTH_TILES_X, LABYRINTH_TILES_Y);
     world.walls = lab.getWalls();
     world.actionPanels = lab.getActionPanels();
     world.actionPanels.forEach(a => a.doAction = doAction);
@@ -204,7 +210,7 @@ document.addEventListener("DOMContentLoaded", function pageInit(event){
     
     btnGhost = document.getElementById("btnGhost");
     btnGhost.addEventListener("click", onclickGhost);
-    setTimeout(() => enableGhost(true), 10000);
+    setTimeout(() => enableGhost(true), GHOST_INITIAL_DELAY);
 
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
