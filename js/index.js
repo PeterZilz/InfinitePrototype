@@ -87,6 +87,8 @@ var world = {
     walls: null,
     /** @type {ActionPanel[]} */
     actionPanels: null,
+    /** @type {Man[]} */
+    enemies: null,
     score: 0
 };
 
@@ -112,6 +114,7 @@ function renderWorld(context, width, height, rangeX, rangeY, offsetX, offsetY){
     renderBackground(world.background, context, width, height, rangeX, rangeY, offsetX, offsetY);
     world.walls.forEach(w => renderWall(w, context, width, height, rangeX, rangeY, offsetX, offsetY));
     world.actionPanels.filter(a=>a.isActive===true).forEach(a => renderWall(a, context, width, height, rangeX, rangeY, offsetX, offsetY));
+    world.enemies.forEach(e => renderMan(e, context, width, height, rangeX, rangeY, offsetX, offsetY));
     renderMan(world.ego, context, width, height, rangeX, rangeY, offsetX, offsetY);
 }
 
@@ -201,6 +204,7 @@ document.addEventListener("DOMContentLoaded", function pageInit(event){
     world.walls = lab.getWalls();
     world.actionPanels = lab.getActionPanels();
     world.actionPanels.forEach(a => a.doAction = doAction);
+    world.enemies = lab.getEnemies();
     
     /** @type {HTMLCanvasElement} */
     canvas = document.getElementById("playfield");

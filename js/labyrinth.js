@@ -1,10 +1,13 @@
 ///<reference path="./wall.js" />
 ///<reference path="./action-panel.js" />
+///<reference path="./man.js" />
 
 "use strict";
 
 /** Percentage of tiles, that will have ActionPanels. */
 const LABYRINTH_ACTION_PERCENTAGE = 0.07;
+/** Percentage of tiles, that will have enemies on them. */
+const LABYRINTH_ENEMY_PERCENTAGE = 0.07;
 
 class Labyrinth
 {
@@ -43,18 +46,36 @@ class Labyrinth
 
         this.tiles = tiles;
 
-
         // generate positions for the action panels:
-        this.actionPositions = [];
+        this.actionPositions = Labyrinth.generateRandomPositions(tilesX, tilesY, LABYRINTH_ACTION_PERCENTAGE);
+
+        // generate positions for enemies:
+        this.enemyPositions = Labyrinth.generateRandomPositions(tilesX, tilesY, LABYRINTH_ENEMY_PERCENTAGE);
+    }
+
+    /**
+     * Generates a list of positions in terms of the internal representation.
+     * May contain duplicates.
+     * @param {number} tilesX 
+     * @param {number} tilesY 
+     * @param {number} percentage 
+     * @returns {number[][]}
+     */
+    static generateRandomPositions(tilesX, tilesY, percentage)
+    {
+        // generate positions for the action panels:
+        let positions = [];
 
         for(let i=0;i<tilesX*tilesY*LABYRINTH_ACTION_PERCENTAGE;i++)
         {
-            // this may produce multiple action panel on one tile:
-            this.actionPositions.push([
+            // this may produce multiple positions on one tile:
+            positions.push([
                 Math.floor(Math.random()*tilesX)*2+1,
                 Math.floor(Math.random()*tilesY)*2+1
             ]);
         }
+
+        return positions;
     }
 
     /**
@@ -78,6 +99,20 @@ class Labyrinth
         });
 
         return panels;
+    }
+
+    /**
+     * Creates Man-objects for the prepared positions. May contain duplicates.
+     * @returns {Man[]}
+     */
+    getEnemies()
+    {
+        let top = this.tiles.length/2;
+        if(((this.tiles.length-1)/2)%2==0) top++;
+        let left = -this.tiles[0].length/2;
+
+        let enemyList = this.enemyPositions.map(p => new Man(left + 0.5 + p[0],top - 0.5 - p[1],"#DD1111"));
+        return enemyList;
     }
 
     /**
