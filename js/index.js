@@ -87,7 +87,8 @@ var world = {
     walls: null,
     /** @type {ActionPanel[]} */
     actionPanels: null,
-    score: 0
+    score: 0,
+    totalScore: 0
 };
 
 /** @type {HTMLCanvasElement} */
@@ -133,7 +134,7 @@ function doAction()
 function updateScore()
 {
     spnScore.classList.remove("animCounterIncrease");
-    spnScore.innerText = Math.round(world.score) + "";
+    spnScore.innerText = Math.round(world.score) + "/" + world.totalScore;
     // Removing and adding the animation class is not enough.
     // Without the following line it would have no effect.
     void spnScore.offsetWidth;
@@ -201,12 +202,14 @@ document.addEventListener("DOMContentLoaded", function pageInit(event){
     world.walls = lab.getWalls();
     world.actionPanels = lab.getActionPanels();
     world.actionPanels.forEach(a => a.doAction = doAction);
+    world.totalScore = world.actionPanels.length;
     
     /** @type {HTMLCanvasElement} */
     canvas = document.getElementById("playfield");
     canvas.addEventListener("mouseup", onPlayfieldMouseUp);
 
     spnScore = document.getElementById("score");
+    spnScore.innerText = Math.round(world.score) + "/" + world.totalScore;
     
     btnGhost = document.getElementById("btnGhost");
     btnGhost.addEventListener("click", onclickGhost);
