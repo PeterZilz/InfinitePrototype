@@ -73,7 +73,14 @@ function takeStep()
     var context = canvas.getContext("2d");
     renderWorld(context, canvas.width, canvas.height, world.baseRange * relX, world.baseRange * relY, world.ego.x, world.ego.y);
 
-    requestAnimationFrame(takeStep);
+    if(world.score == world.totalScore)
+    {
+        isAnimationRunning = false;
+        showVictoryScreen();
+        return;
+    }
+    else 
+        requestAnimationFrame(takeStep);
 }
 
 
@@ -196,6 +203,18 @@ function onclickGhost(event)
     setTimeout(() => enableGhost(true), GHOST_DURATION + GHOST_COOLDOWN);
 }
 
+function startNewGame()
+{
+    // just reload the page
+    window.location = "";
+}
+
+function showVictoryScreen()
+{
+    document.getElementById("victoryScreen").style.display = null;
+    document.getElementsByClassName("disabler")[0].style.display="block";
+}
+
 document.addEventListener("DOMContentLoaded", function pageInit(event){
 
     let lab = new Labyrinth(LABYRINTH_TILES_X, LABYRINTH_TILES_Y);
@@ -214,6 +233,8 @@ document.addEventListener("DOMContentLoaded", function pageInit(event){
     btnGhost = document.getElementById("btnGhost");
     btnGhost.addEventListener("click", onclickGhost);
     setTimeout(() => enableGhost(true), GHOST_INITIAL_DELAY);
+
+    document.getElementById("btnNewGame").addEventListener("click", startNewGame);
 
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;

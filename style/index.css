@@ -76,3 +76,59 @@ canvas {
         color: rgba(207, 207, 207, 0.4);
     }
 }
+
+.disabler {
+    background: #20202070;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    display: none;
+}
+
+
+.splashScreen {
+    position: absolute;
+    margin: 15% 15% 15% 15%;
+    width: 70%;
+    /* height: 70%; */
+    z-index: 4;
+    padding: 1em;
+    box-sizing: border-box;
+    border-radius: 0.5em;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    background: #202020;
+}
+
+.splashTitle {
+    font-size: 3em;
+    margin-bottom: 0.3em;
+}
+
+.splashMessage {
+    font-size: 1.5em;
+    margin-bottom: 2em;
+}
+
+.splashButton {
+    margin-bottom: 0.5em;
+    font-size: 1.5em;
+    color: rgb(207, 207, 207);
+    background: rgba(207, 207, 207, 0.15);
+    border: 2px solid rgb(207, 207, 207);
+    border-radius: 0.2em;
+    padding-left:   0.4em;
+    padding-right:  0.4em;
+    padding-top:    0.2em;
+    padding-bottom: 0.2em;
+}
+.splashButton:hover {
+    background: rgba(207, 207, 207, 0.4);
+}
+.splashButton:active{
+    background: rgba(207, 207, 207, 0.7);
+}
