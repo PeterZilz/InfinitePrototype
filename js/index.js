@@ -191,8 +191,8 @@ function endGhost()
 const GHOST_INITIAL_DELAY = 10000;
 const GHOST_DURATION = 2000;
 const GHOST_COOLDOWN = 10000;
-const LABYRINTH_TILES_X = 20;
-const LABYRINTH_TILES_Y = 20;
+const LABYRINTH_TILES_X = 16;
+const LABYRINTH_TILES_Y = 16;
 
 function onclickGhost(event)
 {
