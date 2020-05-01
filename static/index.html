@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta property="og:title" content="Infinite Prototype" />
+    <meta property="og:type" content="website" />
+    <meta property="og:description" content="Sammle alle Quadrate." />
+    <meta property="og:url" content="https://infinity.synoikos.de/InfinitePrototype/index.html" />
+    <meta property="og:image" content="https://infinity.synoikos.de/InfinitePrototype/infinitePreview.png" />
+
+    
+    <link rel="icon" href="favicon32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="favicon96.png" type="image/png" sizes="96x96">
+    <link rel="icon" href="favicon144.png" type="image/png" sizes="144x144">
+    <!-- svg favicon works in modern desktop browsers but in chrome on mobile (1.5.2020) -->
+    <!-- https://caniuse.com/#feat=link-icon-svg -->
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" sizes="any">
+    <link rel="stylesheet" href="style/index.css" />
+    <link rel="manifest" href="manifest.json">
+    
+    <title>Infinite Prototype</title>
+
+    <script type="text/javascript" src="js/elm.js"></script>
+</head>
+<body>
+    <div id="app"></div>
+    <script type="text/javascript">
+        const app = Elm.Main.init({
+            node: document.getElementById("app"),
+        });
+    </script>
+</body>
+</html>

@@ -7,8 +7,15 @@
         {
             "type": "chrome",
             "request": "launch",
-            "name": "Chrome gegen localhost starten",
-            "url": "file:///home/peter/programmieren/InfinitePrototype/index.html",
+            "name": "Launch vanilla (file)",
+            "url": "file:///home/peter/programmieren/InfinitePrototype/dist/index.html",
+            "webRoot": "${workspaceFolder}"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Launch Elm (file)",
+            "url": "file:///home/peter/programmieren/InfinitePrototype/static/index.html",
             "webRoot": "${workspaceFolder}"
         }
     ]
