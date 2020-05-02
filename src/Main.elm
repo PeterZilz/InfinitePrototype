@@ -6,8 +6,10 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (preventDefaultOn)
 import Json.Decode as Decode exposing (succeed)
+import Length exposing (Meters)
 import Math.Matrix4 exposing (Mat4)
 import Playfield exposing (..)
+import Point2d exposing (Point2d)
 import WebGL
 
 
@@ -31,24 +33,37 @@ type alias Model =
     { width : Int
     , height : Int
     , modelViewProjectionMatrix : Mat4
+    , currentPosition : Point2d Meters World
+    , translationMatrix : Mat4
     }
 
 
-modelInitialValue size =
+modelInitialValue size startPoint =
     { width = size.width
     , height = size.height
-    , modelViewProjectionMatrix = getModelViewProjectionMatrix (toFloat size.width / toFloat size.height)
+    , modelViewProjectionMatrix = getModelViewProjectionMatrix (toFloat size.width / toFloat size.height) startPoint
+    , currentPosition = startPoint
+    , translationMatrix = getTranslationMatrix startPoint
     }
 
 
 init : WindowSize -> ( Model, Cmd Msg )
 init size =
-    ( modelInitialValue size, Cmd.none )
+    ( modelInitialValue size Point2d.origin, Cmd.none )
 
 
 type Msg
     = DoNothing
     | Resized Int Int
+
+
+updateAspectRatio : Int -> Int -> Model -> Model
+updateAspectRatio w h model =
+    { model
+        | width = w
+        , height = h
+        , modelViewProjectionMatrix = getModelViewProjectionMatrix (toFloat w / toFloat h) model.currentPosition
+    }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -58,11 +73,7 @@ update msg model =
             ( model, Cmd.none )
 
         Resized w h ->
-            ( { model
-                | width = w
-                , height = h
-                , modelViewProjectionMatrix = getModelViewProjectionMatrix (toFloat w / toFloat h)
-              }
+            ( updateAspectRatio w h model
             , Cmd.none
             )
 
@@ -118,4 +129,6 @@ viewPlayfield model =
         , width model.width
         , height model.height
         ]
-        [ background model.modelViewProjectionMatrix ]
+        [ avatar model.modelViewProjectionMatrix model.translationMatrix
+        , background model.modelViewProjectionMatrix model.translationMatrix
+        ]
