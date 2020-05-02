@@ -4,12 +4,14 @@ import Browser
 import Browser.Events as BE
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (preventDefaultOn)
-import Json.Decode as Decode exposing (succeed)
+import Html.Events exposing (on, preventDefaultOn)
+import Json.Decode as Decode exposing (Decoder, succeed)
 import Length exposing (Meters)
 import Math.Matrix4 exposing (Mat4)
+import Pixels exposing (Pixels)
 import Playfield exposing (..)
 import Point2d exposing (Point2d)
+import Rectangle2d exposing (Rectangle2d)
 import WebGL
 
 
@@ -32,6 +34,7 @@ type alias WindowSize =
 type alias Model =
     { width : Int
     , height : Int
+    , screen : Rectangle2d Pixels ScreenPixels
     , modelViewProjectionMatrix : Mat4
     , currentPosition : Point2d Meters World
     , translationMatrix : Mat4
@@ -41,6 +44,7 @@ type alias Model =
 modelInitialValue size startPoint =
     { width = size.width
     , height = size.height
+    , screen = getScreen size.width size.height
     , modelViewProjectionMatrix = getModelViewProjectionMatrix (toFloat size.width / toFloat size.height) startPoint
     , currentPosition = startPoint
     , translationMatrix = getTranslationMatrix startPoint
@@ -55,6 +59,7 @@ init size =
 type Msg
     = DoNothing
     | Resized Int Int
+    | TargetSelected Int Int
 
 
 updateAspectRatio : Int -> Int -> Model -> Model
@@ -62,7 +67,27 @@ updateAspectRatio w h model =
     { model
         | width = w
         , height = h
+        , screen = getScreen w h
         , modelViewProjectionMatrix = getModelViewProjectionMatrix (toFloat w / toFloat h) model.currentPosition
+    }
+
+
+pixelToWorld : Model -> Int -> Int -> Point2d Meters World
+pixelToWorld model x y =
+    -- not sure, why the inversion of the y-coordinate is necessary
+    toWorld model.screen model.currentPosition x (model.height - y)
+
+
+updateCurrentPosition : Int -> Int -> Model -> Model
+updateCurrentPosition x y model =
+    let
+        newPosition =
+            pixelToWorld model x y
+    in
+    { model
+        | currentPosition = newPosition
+        , modelViewProjectionMatrix = getModelViewProjectionMatrix (toFloat model.width / toFloat model.height) newPosition
+        , translationMatrix = getTranslationMatrix newPosition
     }
 
 
@@ -76,6 +101,9 @@ update msg model =
             ( updateAspectRatio w h model
             , Cmd.none
             )
+
+        TargetSelected x y ->
+            ( updateCurrentPosition x y model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -128,7 +156,20 @@ viewPlayfield model =
         , preventContextMenu DoNothing
         , width model.width
         , height model.height
+        , onPlayfieldMouseUp
         ]
         [ avatar model.modelViewProjectionMatrix model.translationMatrix
         , background model.modelViewProjectionMatrix model.translationMatrix
         ]
+
+
+offsetDecoder : (Int -> Int -> msg) -> Decoder msg
+offsetDecoder event =
+    Decode.map2 event
+        (Decode.field "offsetX" Decode.int)
+        (Decode.field "offsetY" Decode.int)
+
+
+onPlayfieldMouseUp : Attribute Msg
+onPlayfieldMouseUp =
+    on "mouseup" (offsetDecoder TargetSelected)

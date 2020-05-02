@@ -1,10 +1,20 @@
-module Playfield exposing (World, avatar, background, getModelViewProjectionMatrix, getTranslationMatrix)
+module Playfield exposing
+    ( ScreenPixels
+    , World
+    , avatar
+    , background
+    , getModelViewProjectionMatrix
+    , getScreen
+    , getTranslationMatrix
+    , toWorld
+    )
 
 -- Elm uses webgl 1 and with that GLES 2 :-(
 -- For a good cheat sheet for the GLES 2 shader language, see
 -- https://www.khronos.org/files/webgl/webgl-reference-card-1_0.pdf
 
 import Arc2d
+import Axis3d
 import Camera3d
 import Circle2d
 import Direction3d
@@ -14,11 +24,12 @@ import Geometry.Interop.LinearAlgebra.Point3d as Point3d
 import Length exposing (Meters)
 import Math.Matrix4 exposing (Mat4)
 import Math.Vector2 exposing (Vec2)
+import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
 import Point3d
 import Polyline2d
 import Quantity exposing (Quantity)
-import Rectangle2d
+import Rectangle2d exposing (Rectangle2d)
 import SketchPlane3d exposing (SketchPlane3d)
 import Viewpoint3d exposing (Viewpoint3d)
 import WebGL
@@ -29,10 +40,23 @@ type World
     = World
 
 
+type ScreenPixels
+    = ScreenPixels
 
--- cameraPosition : Point2d Meters World
--- cameraPosition =
---     Point2d.meters 0 0
+
+getScreen : Int -> Int -> Rectangle2d Pixels ScreenPixels
+getScreen width height =
+    Rectangle2d.from Point2d.origin (Point2d.pixels (toFloat width) (toFloat height))
+
+
+toWorld : Rectangle2d Pixels ScreenPixels -> Point2d Meters World -> Int -> Int -> Point2d Meters World
+toWorld screen cameraPosition offsetX offsetY =
+    Camera3d.ray
+        (orthographicCamera cameraPosition)
+        screen
+        (Point2d.pixels (toFloat offsetX) (toFloat offsetY))
+        |> Axis3d.originPoint
+        |> Point3d.projectInto backgroundPlane
 
 
 backgroundPlane : SketchPlane3d Meters World defines
@@ -60,6 +84,13 @@ orthographicCamera cameraPosition =
         { viewpoint = cameraViewpoint cameraPosition
         , viewportHeight = Length.meters 5
         }
+
+
+
+-- Frame is just a location + orientation.
+-- It is a handy tool to describe conversions between coodinate systems.
+-- For example from local model coordinates to world coordinates.
+-- In my case, those two are the same.
 
 
 frame : Frame3d Meters World defines
@@ -181,9 +212,11 @@ avatarFragmentShader =
     [glsl|
         precision mediump float;
         varying vec2 vtextcoord;
+
+        const vec4 color = vec4(0., float(0xA8)/255.,float(0x3E)/255., 0.);
         
         void main () {
-            gl_FragColor = vec4(0., 1., 0., 0.);
+            gl_FragColor = color;
         }
     |]
 
