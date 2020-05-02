@@ -2,6 +2,8 @@ module Main exposing (Model, Msg, init, main, subscriptions, update, view)
 
 import Browser
 import Browser.Events as BE
+import Direction2d
+import Duration
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (on, preventDefaultOn)
@@ -11,7 +13,10 @@ import Math.Matrix4 exposing (Mat4)
 import Pixels exposing (Pixels)
 import Playfield exposing (..)
 import Point2d exposing (Point2d)
+import Quantity exposing (lessThanOrEqualTo)
 import Rectangle2d exposing (Rectangle2d)
+import Speed
+import Vector2d
 import WebGL
 
 
@@ -38,6 +43,7 @@ type alias Model =
     , modelViewProjectionMatrix : Mat4
     , currentPosition : Point2d Meters World
     , translationMatrix : Mat4
+    , target : Maybe (Point2d Meters World)
     }
 
 
@@ -48,6 +54,7 @@ modelInitialValue size startPoint =
     , modelViewProjectionMatrix = getModelViewProjectionMatrix (toFloat size.width / toFloat size.height) startPoint
     , currentPosition = startPoint
     , translationMatrix = getTranslationMatrix startPoint
+    , target = Nothing
     }
 
 
@@ -60,6 +67,7 @@ type Msg
     = DoNothing
     | Resized Int Int
     | TargetSelected Int Int
+    | NewPosition (Point2d Meters World)
 
 
 updateAspectRatio : Int -> Int -> Model -> Model
@@ -78,17 +86,28 @@ pixelToWorld model x y =
     toWorld model.screen model.currentPosition x (model.height - y)
 
 
-updateCurrentPosition : Int -> Int -> Model -> Model
-updateCurrentPosition x y model =
-    let
-        newPosition =
-            pixelToWorld model x y
-    in
+updateCurrentPosition : Point2d Meters World -> Model -> Model
+updateCurrentPosition newPosition model =
     { model
         | currentPosition = newPosition
         , modelViewProjectionMatrix = getModelViewProjectionMatrix (toFloat model.width / toFloat model.height) newPosition
         , translationMatrix = getTranslationMatrix newPosition
+        , target = updateTarget model.target newPosition
     }
+
+
+updateTarget : Maybe (Point2d Meters World) -> Point2d Meters World -> Maybe (Point2d Meters World)
+updateTarget target newPosition =
+    case target of
+        Nothing ->
+            target
+
+        Just t ->
+            if t == newPosition then
+                Nothing
+
+            else
+                target
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -103,12 +122,49 @@ update msg model =
             )
 
         TargetSelected x y ->
-            ( updateCurrentPosition x y model, Cmd.none )
+            ( { model | target = Just (pixelToWorld model x y) }, Cmd.none )
+
+        NewPosition pos ->
+            ( updateCurrentPosition pos model, Cmd.none )
+
+
+speed : Speed.Speed
+speed =
+    Speed.metersPerSecond 15
+
+
+moveTowards : Point2d Meters World -> Point2d Meters World -> Duration.Duration -> Point2d Meters World
+moveTowards target current tDelta =
+    let
+        dist =
+            Point2d.distanceFrom target current
+
+        stepSize =
+            Quantity.at speed tDelta
+    in
+    if lessThanOrEqualTo stepSize dist then
+        target
+
+    else
+        Point2d.translateBy
+            (Direction2d.from current target
+                |> Maybe.map (Vector2d.withLength stepSize)
+                |> Maybe.withDefault Vector2d.zero
+            )
+            current
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    BE.onResize Resized
+subscriptions model =
+    Sub.batch
+        [ BE.onResize Resized
+        , case model.target of
+            Nothing ->
+                Sub.none
+
+            Just t ->
+                BE.onAnimationFrameDelta (Duration.milliseconds >> moveTowards t model.currentPosition >> NewPosition)
+        ]
 
 
 preventContextMenu : msg -> Attribute msg
