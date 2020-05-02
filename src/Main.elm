@@ -18,6 +18,7 @@ import Rectangle2d exposing (Rectangle2d)
 import Speed
 import Vector2d
 import WebGL
+import Labyrinth exposing (..)
 
 
 main : Program WindowSize Model Msg
@@ -215,6 +216,7 @@ viewPlayfield model =
         , onPlayfieldMouseUp
         ]
         [ avatar model.modelViewProjectionMatrix model.translationMatrix
+        , walls model.modelViewProjectionMatrix
         , background model.modelViewProjectionMatrix model.translationMatrix
         ]
 
