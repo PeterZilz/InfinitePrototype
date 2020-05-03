@@ -41,8 +41,7 @@ type alias Maze =
 
 
 type alias MazeData =
-    { cellList : List Cell -- not sure, if this is even needed
-    , wallStructure : Dict.Dict ( Int, Int ) (List Wall)
+    { wallStructure : Dict.Dict ( Int, Int ) (List Wall)
     , wallMesh : WebGL.Mesh Vertex
     }
 
@@ -56,8 +55,8 @@ cell ( isSouthOpen, isEastOpen ) =
     }
 
 
-cells : List ( Bool, Bool ) -> List Cell
-cells =
+toCells : List ( Bool, Bool ) -> List Cell
+toCells =
     List.map cell
 
 
@@ -75,36 +74,44 @@ toVertex =
     Point2d.toVec2 >> Vertex
 
 
+thickness : Float
 thickness =
     0.25
 
 
+closeEastModel : Wall
 closeEastModel =
     Rectangle2d.from (Point2d.meters 0.5 0.75) (Point2d.meters (0.5 + thickness) -0.75)
 
 
+closeWestModel : Wall
 closeWestModel =
     Rectangle2d.translateBy (Vector2d.meters -1.25 0) closeEastModel
 
 
+closeNorthModel : Wall
 closeNorthModel =
     Rectangle2d.rotateAround Point2d.origin (Angle.degrees 90) closeEastModel
 
 
+closeSouthModel : Wall
 closeSouthModel =
     Rectangle2d.translateBy (Vector2d.meters 0 -1.25) closeNorthModel
 
 
+openTopEast : Wall
 openTopEast =
     Rectangle2d.from (Point2d.meters 0.5 0.5) (Point2d.meters 1.5 (0.5 + thickness))
 
 
+openPairEast : List Wall
 openPairEast =
     [ openTopEast
     , Rectangle2d.translateBy (Vector2d.meters 0 -1.25) openTopEast
     ]
 
 
+openPairSouth : List Wall
 openPairSouth =
     List.map
         (Rectangle2d.rotateAround Point2d.origin (Angle.degrees -90))
@@ -139,14 +146,14 @@ cellToWalls tile =
            )
 
 
-getIndex2d : Int -> Int -> Int -> ( Int, Int )
-getIndex2d width height index =
+getIndex2d : Int -> Int -> ( Int, Int )
+getIndex2d height index =
     ( index // height, modBy height index )
 
 
-intoDict : Int -> Int -> List Cell -> Dict.Dict ( Int, Int ) Cell
-intoDict width height maze =
-    List.indexedMap (\i tile -> ( getIndex2d width height i, tile )) maze
+intoDict : Int -> List a -> Dict.Dict ( Int, Int ) a
+intoDict height items =
+    List.indexedMap (\index item -> ( getIndex2d height index, item )) items
         |> Dict.fromList
 
 
@@ -158,43 +165,37 @@ cellCenter index =
         |> Vector2d.scaleBy 2
 
 
-testMaze : Dict.Dict ( Int, Int ) Cell
-testMaze =
-    intoDict 2
-        2
-        [ cell ( False, True )
-        , cell ( True, False )
-        , cell ( True, False )
-        , cell ( False, True )
-        ]
-
-
+sanitize : Int -> Int -> Dict.Dict ( Int, Int ) Cell -> ( Int, Int ) -> Cell -> Cell
 sanitize width height maze index tile =
     tile
-        |> sanitizeEastBorder width height index
-        |> sanitizeSouthBorder width height index
+        |> sanitizeEastBorder width index
+        |> sanitizeSouthBorder height index
         |> sanitizeNorthBorder maze index
         |> sanitizeWestBorder maze index
 
 
-shouldEastBeClosed width height ( x, y ) =
+shouldEastBeClosed : Int -> ( Int, Int ) -> Bool
+shouldEastBeClosed width ( x, _ ) =
     x == width - 1
 
 
-sanitizeEastBorder width height index tile =
-    if shouldEastBeClosed width height index && tile.isEastOpen then
+sanitizeEastBorder : Int -> ( Int, Int ) -> Cell -> Cell
+sanitizeEastBorder width index tile =
+    if shouldEastBeClosed width index && tile.isEastOpen then
         { tile | isEastOpen = False }
 
     else
         tile
 
 
-shouldSouthBeClosed width height ( x, y ) =
+shouldSouthBeClosed : Int -> ( Int, Int ) -> Bool
+shouldSouthBeClosed height ( _, y ) =
     y == height - 1
 
 
-sanitizeSouthBorder width height index tile =
-    if shouldSouthBeClosed width height index && tile.isSouthOpen then
+sanitizeSouthBorder : Int -> ( Int, Int ) -> Cell -> Cell
+sanitizeSouthBorder height index tile =
+    if shouldSouthBeClosed height index && tile.isSouthOpen then
         { tile | isSouthOpen = False }
 
     else
@@ -211,6 +212,7 @@ shouldNorthBeOpen maze ( x, y ) =
            )
 
 
+sanitizeNorthBorder : Dict.Dict ( Int, Int ) Cell -> ( Int, Int ) -> Cell -> Cell
 sanitizeNorthBorder maze index tile =
     if shouldNorthBeOpen maze index && not tile.isNorthOpen then
         { tile | isNorthOpen = True }
@@ -219,6 +221,7 @@ sanitizeNorthBorder maze index tile =
         tile
 
 
+shouldWestBeOpen : Dict.Dict ( Int, Int ) Cell -> ( Int, Int ) -> Bool
 shouldWestBeOpen maze ( x, y ) =
     x
         > 0
@@ -228,6 +231,7 @@ shouldWestBeOpen maze ( x, y ) =
            )
 
 
+sanitizeWestBorder : Dict.Dict ( Int, Int ) Cell -> ( Int, Int ) -> Cell -> Cell
 sanitizeWestBorder maze index tile =
     if shouldWestBeOpen maze index && not tile.isWestOpen then
         { tile | isWestOpen = True }
@@ -237,34 +241,42 @@ sanitizeWestBorder maze index tile =
 
 
 createModel : ( Int, Int ) -> Cell -> List Wall
-createModel index tile =
-    List.map (Rectangle2d.translateBy (cellCenter index)) (cellToWalls tile)
+createModel index =
+    cellToWalls
+        >> List.map (Rectangle2d.translateBy (cellCenter index))
 
 
-{-| Mapping from tile index to surrounding walls.
-Important for collision detection.
--}
-wallDataStructure : Int -> Int -> List Cell -> Dict.Dict ( Int, Int ) (List Wall)
-wallDataStructure width height maze =
-    maze
-        |> intoDict width height
-        |> Dict.map (sanitize width height (intoDict width height maze))
-        |> Dict.map createModel
+toWallModel : Dict.Dict ( Int, Int ) Cell -> Dict.Dict ( Int, Int ) (List Wall)
+toWallModel =
+    Dict.map createModel
 
 
-createMaze : Int -> Int -> List ( Bool, Bool ) -> MazeData
-createMaze width height randomValues =
-    { cellList = cells randomValues
-    , wallStructure = wallDataStructure width height (cells randomValues)
-    , wallMesh = wallMesh (wallModel (wallDataStructure width height (cells randomValues)))
+sanitizeCells : Int -> Int -> Dict.Dict ( Int, Int ) Cell -> Dict.Dict ( Int, Int ) Cell
+sanitizeCells width height cellDict =
+    Dict.map (sanitize width height cellDict) cellDict
+
+
+getMazeData : Dict.Dict ( Int, Int ) (List Wall) -> MazeData
+getMazeData wallDict =
+    { wallStructure = wallDict
+    , wallMesh = wallDict |> flattenWallStructure |> toMesh
     }
 
 
-wallModel : Dict.Dict ( Int, Int ) (List Wall) -> List Wall
-wallModel wallData =
-    wallData
-        |> Dict.values
-        |> List.concatMap identity
+createMaze : Int -> Int -> List ( Bool, Bool ) -> MazeData
+createMaze width height randomConnections =
+    randomConnections
+        |> toCells
+        |> intoDict height
+        |> sanitizeCells width height
+        |> toWallModel
+        |> getMazeData
+
+
+flattenWallStructure : Dict.Dict ( Int, Int ) (List Wall) -> List Wall
+flattenWallStructure =
+    Dict.values
+        >> List.concatMap identity
 
 
 toTriples : List a -> List ( a, a, a )
@@ -284,10 +296,10 @@ triangulateRect =
         >> toTriples
 
 
-wallMesh : List Wall -> WebGL.Mesh Vertex
-wallMesh model =
-    List.concatMap triangulateRect model
-        |> WebGL.triangles
+toMesh : List Wall -> WebGL.Mesh Vertex
+toMesh =
+    List.concatMap triangulateRect
+        >> WebGL.triangles
 
 
 type alias Uniforms =
