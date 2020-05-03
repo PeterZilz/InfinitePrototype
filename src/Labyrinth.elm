@@ -1,9 +1,10 @@
-module Labyrinth exposing (Maze, MazeData, createMaze, doorwayGenerator, walls)
+module Labyrinth exposing (Maze, MazeData, cellCenter, createMaze, doorwayGenerator, walls, wouldCrossAnyWall)
 
 import Angle
 import Dict
 import Geometry.Interop.LinearAlgebra.Point2d as Point2d
 import Length exposing (Meters)
+import LineSegment2d exposing (LineSegment2d)
 import Math.Matrix4 exposing (Mat4)
 import Math.Vector2 exposing (Vec2)
 import Math.Vector4 exposing (Vec4, vec4)
@@ -149,6 +150,50 @@ cellToWalls tile =
 getIndex2d : Int -> Int -> ( Int, Int )
 getIndex2d height index =
     ( index // height, modBy height index )
+
+
+{-| This is the inverse of "cellCenter".
+-}
+toGridIndex : Point2d Meters World -> ( Int, Int )
+toGridIndex point =
+    Point2d.toTuple Length.inMeters point
+        |> Tuple.mapBoth (\x -> round (x / 2)) (\x -> round (-x / 2))
+
+
+getCellWalls : MazeData -> ( Int, Int ) -> List Wall
+getCellWalls maze index =
+    Maybe.withDefault [] (Dict.get index maze.wallStructure)
+
+
+getNeighborhood : ( Int, Int ) -> List ( Int, Int )
+getNeighborhood ( x, y ) =
+    [ ( x - 1, y )
+    , ( x, y - 1 )
+    , ( x, y )
+    , ( x + 1, y )
+    , ( x, y + 1 )
+    ]
+
+
+getLocalWalls : MazeData -> Point2d Meters World -> List Wall
+getLocalWalls maze position =
+    List.concatMap (getCellWalls maze) (getNeighborhood (toGridIndex position))
+
+
+wouldCrossWall : LineSegment2d Meters World -> Wall -> Bool
+wouldCrossWall travelPath wall =
+    Rectangle2d.edges wall
+        |> List.any (\edge -> LineSegment2d.intersectionPoint travelPath edge /= Nothing)
+
+
+wouldCrossAnyWall : Maze -> Point2d Meters World -> Point2d Meters World -> Bool
+wouldCrossAnyWall maze current target =
+    case maze.data of
+        Nothing ->
+            False
+
+        Just labyrinth ->
+            List.any (wouldCrossWall (LineSegment2d.from current target)) (getLocalWalls labyrinth current)
 
 
 intoDict : Int -> List a -> Dict.Dict ( Int, Int ) a

@@ -58,14 +58,28 @@ modelInitialValue size startPoint =
     , currentPosition = startPoint
     , translationMatrix = getTranslationMatrix startPoint
     , target = Nothing
-    , maze = Maze 3 3 Nothing
+    , maze = Maze gridWidth gridHeight Nothing
     }
+
+
+gridWidth : Int
+gridWidth =
+    5
+
+
+gridHeight : Int
+gridHeight =
+    5
+
+
+getStartingPoint =
+    Point2d.translateBy (cellCenter ( gridWidth // 2, gridHeight // 2 )) Point2d.origin
 
 
 init : WindowSize -> ( Model, Cmd Msg )
 init size =
-    ( modelInitialValue size Point2d.origin
-    , Random.generate MazeGenerated (doorwayGenerator 3 3)
+    ( modelInitialValue size getStartingPoint
+    , Random.generate MazeGenerated (doorwayGenerator gridWidth gridHeight)
     )
 
 
@@ -103,6 +117,15 @@ updateCurrentPosition newPosition model =
     }
 
 
+moveToNewPosition : Point2d Meters World -> Model -> Model
+moveToNewPosition newPosition model =
+    if wouldCrossAnyWall model.maze model.currentPosition newPosition then
+        { model | target = Nothing }
+
+    else
+        updateCurrentPosition newPosition model
+
+
 updateTarget : Maybe (Point2d Meters World) -> Point2d Meters World -> Maybe (Point2d Meters World)
 updateTarget target newPosition =
     case target of
@@ -116,12 +139,14 @@ updateTarget target newPosition =
             else
                 target
 
-generateMaze : Int -> Int -> List (Bool, Bool) -> Maze
+
+generateMaze : Int -> Int -> List ( Bool, Bool ) -> Maze
 generateMaze width height randomValues =
     { width = width
     , height = height
     , data = Just (createMaze width height randomValues)
     }
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -138,10 +163,10 @@ update msg model =
             ( { model | target = Just (pixelToWorld model x y) }, Cmd.none )
 
         NewPosition pos ->
-            ( updateCurrentPosition pos model, Cmd.none )
+            ( moveToNewPosition pos model, Cmd.none )
 
         MazeGenerated bools ->
-            ( {model | maze = generateMaze model.maze.width model.maze.height bools }
+            ( { model | maze = generateMaze model.maze.width model.maze.height bools }
             , Cmd.none
             )
 
