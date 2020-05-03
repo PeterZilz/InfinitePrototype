@@ -1,7 +1,6 @@
-module Labyrinth exposing (walls)
+module Labyrinth exposing (Maze, MazeData, createMaze, doorwayGenerator, walls)
 
 import Angle
-import Array exposing (Array)
 import Dict
 import Geometry.Interop.LinearAlgebra.Point2d as Point2d
 import Length exposing (Meters)
@@ -34,6 +33,20 @@ type alias Cell =
     }
 
 
+type alias Maze =
+    { width : Int
+    , height : Int
+    , data : Maybe MazeData
+    }
+
+
+type alias MazeData =
+    { cellList : List Cell -- not sure, if this is even needed
+    , wallStructure : Dict.Dict ( Int, Int ) (List Wall)
+    , wallMesh : WebGL.Mesh Vertex
+    }
+
+
 cell : ( Bool, Bool ) -> Cell
 cell ( isSouthOpen, isEastOpen ) =
     { isNorthOpen = False
@@ -46,22 +59,6 @@ cell ( isSouthOpen, isEastOpen ) =
 cells : List ( Bool, Bool ) -> List Cell
 cells =
     List.map cell
-
-
-toGridRec : Int -> List (Array Cell) -> List Cell -> List (Array Cell)
-toGridRec height columnAgg remainingCells =
-    case remainingCells of
-        [] ->
-            columnAgg
-
-        _ ->
-            toGridRec height (Array.fromList (List.take height remainingCells) :: columnAgg) (List.drop height remainingCells)
-
-
-toGrid : Int -> List Cell -> Array (Array Cell)
-toGrid height cellList =
-    toGridRec height [] cellList
-        |> Array.fromList
 
 
 type alias Vertex =
@@ -247,16 +244,25 @@ createModel index tile =
 {-| Mapping from tile index to surrounding walls.
 Important for collision detection.
 -}
-wallDataStructure : Dict.Dict ( Int, Int ) (List Wall)
-wallDataStructure =
-    testMaze
-        |> Dict.map (sanitize 2 2 testMaze)
+wallDataStructure : Int -> Int -> List Cell -> Dict.Dict ( Int, Int ) (List Wall)
+wallDataStructure width height maze =
+    maze
+        |> intoDict width height
+        |> Dict.map (sanitize width height (intoDict width height maze))
         |> Dict.map createModel
 
 
-wallModel : List Wall
-wallModel =
-    wallDataStructure
+createMaze : Int -> Int -> List ( Bool, Bool ) -> MazeData
+createMaze width height randomValues =
+    { cellList = cells randomValues
+    , wallStructure = wallDataStructure width height (cells randomValues)
+    , wallMesh = wallMesh (wallModel (wallDataStructure width height (cells randomValues)))
+    }
+
+
+wallModel : Dict.Dict ( Int, Int ) (List Wall) -> List Wall
+wallModel wallData =
+    wallData
         |> Dict.values
         |> List.concatMap identity
 
@@ -278,9 +284,9 @@ triangulateRect =
         >> toTriples
 
 
-wallMesh : WebGL.Mesh Vertex
-wallMesh =
-    List.concatMap triangulateRect wallModel
+wallMesh : List Wall -> WebGL.Mesh Vertex
+wallMesh model =
+    List.concatMap triangulateRect model
         |> WebGL.triangles
 
 
@@ -321,6 +327,6 @@ wallsFragmentShader =
     |]
 
 
-walls : Mat4 -> WebGL.Entity
-walls modelViewProjectionMatrix =
-    WebGL.entity wallsVertexShader wallsFragmentShader wallMesh (getUniforms modelViewProjectionMatrix)
+walls : WebGL.Mesh Vertex -> Mat4 -> WebGL.Entity
+walls mesh modelViewProjectionMatrix =
+    WebGL.entity wallsVertexShader wallsFragmentShader mesh (getUniforms modelViewProjectionMatrix)

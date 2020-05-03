@@ -8,17 +8,18 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (on, preventDefaultOn)
 import Json.Decode as Decode exposing (Decoder, succeed)
+import Labyrinth exposing (..)
 import Length exposing (Meters)
 import Math.Matrix4 exposing (Mat4)
 import Pixels exposing (Pixels)
 import Playfield exposing (..)
 import Point2d exposing (Point2d)
 import Quantity exposing (lessThanOrEqualTo)
+import Random
 import Rectangle2d exposing (Rectangle2d)
 import Speed
 import Vector2d
 import WebGL
-import Labyrinth exposing (..)
 
 
 main : Program WindowSize Model Msg
@@ -45,6 +46,7 @@ type alias Model =
     , currentPosition : Point2d Meters World
     , translationMatrix : Mat4
     , target : Maybe (Point2d Meters World)
+    , maze : Maze
     }
 
 
@@ -56,12 +58,15 @@ modelInitialValue size startPoint =
     , currentPosition = startPoint
     , translationMatrix = getTranslationMatrix startPoint
     , target = Nothing
+    , maze = Maze 3 3 Nothing
     }
 
 
 init : WindowSize -> ( Model, Cmd Msg )
 init size =
-    ( modelInitialValue size Point2d.origin, Cmd.none )
+    ( modelInitialValue size Point2d.origin
+    , Random.generate MazeGenerated (doorwayGenerator 3 3)
+    )
 
 
 type Msg
@@ -69,6 +74,7 @@ type Msg
     | Resized Int Int
     | TargetSelected Int Int
     | NewPosition (Point2d Meters World)
+    | MazeGenerated (List ( Bool, Bool ))
 
 
 updateAspectRatio : Int -> Int -> Model -> Model
@@ -110,6 +116,12 @@ updateTarget target newPosition =
             else
                 target
 
+generateMaze : Int -> Int -> List (Bool, Bool) -> Maze
+generateMaze width height randomValues =
+    { width = width
+    , height = height
+    , data = Just (createMaze width height randomValues)
+    }
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -127,6 +139,11 @@ update msg model =
 
         NewPosition pos ->
             ( updateCurrentPosition pos model, Cmd.none )
+
+        MazeGenerated bools ->
+            ( {model | maze = generateMaze model.maze.width model.maze.height bools }
+            , Cmd.none
+            )
 
 
 speed : Speed.Speed
@@ -215,10 +232,16 @@ viewPlayfield model =
         , height model.height
         , onPlayfieldMouseUp
         ]
-        [ avatar model.modelViewProjectionMatrix model.translationMatrix
-        , walls model.modelViewProjectionMatrix
-        , background model.modelViewProjectionMatrix model.translationMatrix
-        ]
+        (case model.maze.data of
+            Nothing ->
+                []
+
+            Just mazeData ->
+                [ avatar model.modelViewProjectionMatrix model.translationMatrix
+                , walls mazeData.wallMesh model.modelViewProjectionMatrix
+                , background model.modelViewProjectionMatrix model.translationMatrix
+                ]
+        )
 
 
 offsetDecoder : (Int -> Int -> msg) -> Decoder msg
