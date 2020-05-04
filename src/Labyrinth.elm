@@ -1,4 +1,4 @@
-module Labyrinth exposing (Maze, MazeData, cellCenter, createMaze, doorwayGenerator, walls, wouldCrossAnyWall)
+module Labyrinth exposing (Maze, MazeData, cellCenter, createMaze, doorwayGenerator, triangulateRect, walls, wouldCrossAnyWall)
 
 import Angle
 import Dict

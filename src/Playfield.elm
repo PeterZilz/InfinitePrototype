@@ -186,7 +186,7 @@ avatarVertexShader =
 
         void main () {
             vtextcoord = textcoord;
-            gl_Position = perspective * translation * vec4(position, 0., 1.0);
+            gl_Position = perspective * translation * vec4(position, 0.2, 1.0);
         }
     |]
 
@@ -213,7 +213,7 @@ avatarFragmentShader =
         precision mediump float;
         varying vec2 vtextcoord;
 
-        const vec4 color = vec4(0., float(0xA8)/255.,float(0x3E)/255., 0.);
+        const vec4 color = vec4(0., float(0xA8)/255.,float(0x3E)/255., 1.);
         
         void main () {
             gl_FragColor = color;
@@ -225,8 +225,8 @@ backgroundFragmentShader : WebGL.Shader {} Uniforms Varyings
 backgroundFragmentShader =
     [glsl|
         precision mediump float;
-        const vec4 color1 = vec4(0.,float(0x3f)/255.,float(0x72)/255., 0.);
-        const vec4 color2 = vec4(0.,float(0x69)/255.,float(0xbe)/255., 0.);
+        const vec4 color1 = vec4(0.,float(0x3f)/255.,float(0x72)/255., 1.);
+        const vec4 color2 = vec4(0.,float(0x69)/255.,float(0xbe)/255., 1.);
         const float width = 2.;
 
         varying vec2 vtextcoord;

@@ -12,6 +12,7 @@ import Labyrinth exposing (..)
 import Length exposing (Meters)
 import Math.Matrix4 exposing (Mat4)
 import Pixels exposing (Pixels)
+import Plate exposing (..)
 import Playfield exposing (..)
 import Point2d exposing (Point2d)
 import Quantity exposing (lessThanOrEqualTo)
@@ -64,12 +65,20 @@ modelInitialValue size startPoint =
 
 gridWidth : Int
 gridWidth =
-    5
+    3
+
+
+
+-- 17
 
 
 gridHeight : Int
 gridHeight =
-    5
+    3
+
+
+
+-- 17
 
 
 getStartingPoint =
@@ -173,7 +182,7 @@ update msg model =
 
 speed : Speed.Speed
 speed =
-    Speed.metersPerSecond 15
+    Speed.metersPerSecond 10
 
 
 moveTowards : Point2d Meters World -> Point2d Meters World -> Duration.Duration -> Point2d Meters World
@@ -250,7 +259,8 @@ view model =
 
 viewPlayfield : Model -> Html Msg
 viewPlayfield model =
-    WebGL.toHtml
+    WebGL.toHtmlWith
+        [ WebGL.alpha False, WebGL.antialias, WebGL.depth 1 ]
         [ id "playfield"
         , preventContextMenu DoNothing
         , width model.width
@@ -262,9 +272,10 @@ viewPlayfield model =
                 []
 
             Just mazeData ->
-                [ avatar model.modelViewProjectionMatrix model.translationMatrix
-                , walls mazeData.wallMesh model.modelViewProjectionMatrix
+                [ walls mazeData.wallMesh model.modelViewProjectionMatrix
                 , background model.modelViewProjectionMatrix model.translationMatrix
+                , plate model.modelViewProjectionMatrix Math.Matrix4.identity
+                , avatar model.modelViewProjectionMatrix model.translationMatrix
                 ]
         )
 
