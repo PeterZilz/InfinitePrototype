@@ -2,6 +2,7 @@ module Playfield exposing
     ( ScreenPixels
     , World
     , avatar
+    , avatarRadius
     , background
     , getModelViewProjectionMatrix
     , getScreen
@@ -145,9 +146,13 @@ backgroundMesh =
         |> WebGL.triangleFan
 
 
+avatarRadius =
+    0.15
+
+
 avatarMesh : WebGL.Mesh Vertex
 avatarMesh =
-    Circle2d.atOrigin (Length.meters 0.15)
+    Circle2d.atOrigin (Length.meters avatarRadius)
         |> Circle2d.toArc
         |> Arc2d.toPolyline { maxError = Length.meters 0.001 }
         |> Polyline2d.vertices

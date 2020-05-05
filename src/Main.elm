@@ -16,7 +16,7 @@ import Plate exposing (..)
 import Playfield exposing (..)
 import Point2d exposing (Point2d)
 import Quantity exposing (lessThanOrEqualTo)
-import Random
+import Random exposing (Generator)
 import Rectangle2d exposing (Rectangle2d)
 import Speed
 import Vector2d
@@ -48,6 +48,7 @@ type alias Model =
     , translationMatrix : Mat4
     , target : Maybe (Point2d Meters World)
     , maze : Maze
+    , plates : List Plate
     }
 
 
@@ -60,6 +61,7 @@ modelInitialValue size startPoint =
     , translationMatrix = getTranslationMatrix startPoint
     , target = Nothing
     , maze = Maze gridWidth gridHeight Nothing
+    , plates = [ placePlateInCell ( 0, 0 ) ]
     }
 
 
@@ -98,6 +100,7 @@ type Msg
     | TargetSelected Int Int
     | NewPosition (Point2d Meters World)
     | MazeGenerated (List ( Bool, Bool ))
+    | PlatesPlaced (List Plate)
 
 
 updateAspectRatio : Int -> Int -> Model -> Model
@@ -176,6 +179,11 @@ update msg model =
 
         MazeGenerated bools ->
             ( { model | maze = generateMaze model.maze.width model.maze.height bools }
+            , Random.generate PlatesPlaced (plateGenerator gridWidth gridHeight 2)
+            )
+
+        PlatesPlaced plates ->
+            ( { model | plates = plates }
             , Cmd.none
             )
 
@@ -274,9 +282,10 @@ viewPlayfield model =
             Just mazeData ->
                 [ walls mazeData.wallMesh model.modelViewProjectionMatrix
                 , background model.modelViewProjectionMatrix model.translationMatrix
-                , plate model.modelViewProjectionMatrix Math.Matrix4.identity
-                , avatar model.modelViewProjectionMatrix model.translationMatrix
                 ]
+                    ++ List.map (plate model.modelViewProjectionMatrix) model.plates
+                    ++ [ avatar model.modelViewProjectionMatrix model.translationMatrix
+                       ]
         )
 
 
