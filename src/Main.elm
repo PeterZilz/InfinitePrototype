@@ -15,10 +15,12 @@ import Pixels exposing (Pixels)
 import Plate exposing (..)
 import Playfield exposing (..)
 import Point2d exposing (Point2d)
+import Process
 import Quantity exposing (lessThanOrEqualTo)
-import Random exposing (Generator)
+import Random
 import Rectangle2d exposing (Rectangle2d)
 import Speed
+import Task
 import Vector2d
 import WebGL
 
@@ -49,6 +51,9 @@ type alias Model =
     , target : Maybe (Point2d Meters World)
     , maze : Maze
     , plates : List Plate
+    , score : Int
+    , totalScore : Int
+    , isScoreAnimating : Bool
     }
 
 
@@ -61,7 +66,10 @@ modelInitialValue size startPoint =
     , translationMatrix = getTranslationMatrix startPoint
     , target = Nothing
     , maze = Maze gridWidth gridHeight Nothing
-    , plates = [ placePlateInCell ( 0, 0 ) ]
+    , plates = []
+    , score = 0
+    , totalScore = 0
+    , isScoreAnimating = False
     }
 
 
@@ -101,6 +109,7 @@ type Msg
     | NewPosition (Point2d Meters World)
     | MazeGenerated (List ( Bool, Bool ))
     | PlatesPlaced (List Plate)
+    | ScoreAnimationEnded ()
 
 
 updateAspectRatio : Int -> Int -> Model -> Model
@@ -129,13 +138,63 @@ updateCurrentPosition newPosition model =
     }
 
 
-moveToNewPosition : Point2d Meters World -> Model -> Model
+enteredTriggerArea : Point2d Meters World -> Plate -> Maybe Plate
+enteredTriggerArea position area =
+    if Rectangle2d.contains position area.triggerArea then
+        Just area
+
+    else
+        Nothing
+
+
+getEnteredTriggerAreas : Point2d Meters World -> List Plate -> List Plate
+getEnteredTriggerAreas position plates =
+    List.filterMap (enteredTriggerArea position) plates
+
+
+{-| The time the score animation takes in ms.
+Has to be consistent with the css class "animCounterIncrease".
+-}
+scoreAnimationDuration : Float
+scoreAnimationDuration =
+    400
+
+
+delayedEndScoreAnimation : Cmd Msg
+delayedEndScoreAnimation =
+    Process.sleep scoreAnimationDuration
+        |> Task.perform ScoreAnimationEnded
+
+
+processPlateAreas : Point2d Meters World -> Model -> Model
+processPlateAreas newPosition model =
+    case getEnteredTriggerAreas newPosition model.plates of
+        [] ->
+            model
+
+        triggered ->
+            { model
+                | score = model.score + List.length triggered
+                , plates = List.filter (\p -> not (List.member p triggered)) model.plates
+                , isScoreAnimating = True
+            }
+
+
+moveToNewPosition : Point2d Meters World -> Model -> ( Model, Cmd Msg )
 moveToNewPosition newPosition model =
     if wouldCrossAnyWall model.maze model.currentPosition newPosition then
-        { model | target = Nothing }
+        ( { model | target = Nothing }, Cmd.none )
 
     else
         updateCurrentPosition newPosition model
+            |> processPlateAreas newPosition
+            |> (\m ->
+                    if not model.isScoreAnimating && m.isScoreAnimating then
+                        ( m, delayedEndScoreAnimation )
+
+                    else
+                        ( m, Cmd.none )
+               )
 
 
 updateTarget : Maybe (Point2d Meters World) -> Point2d Meters World -> Maybe (Point2d Meters World)
@@ -175,17 +234,20 @@ update msg model =
             ( { model | target = Just (pixelToWorld model x y) }, Cmd.none )
 
         NewPosition pos ->
-            ( moveToNewPosition pos model, Cmd.none )
+            moveToNewPosition pos model
 
         MazeGenerated bools ->
             ( { model | maze = generateMaze model.maze.width model.maze.height bools }
-            , Random.generate PlatesPlaced (plateGenerator gridWidth gridHeight 2)
+            , Random.generate PlatesPlaced (plateGenerator gridWidth gridHeight 1)
             )
 
         PlatesPlaced plates ->
-            ( { model | plates = plates }
+            ( { model | plates = plates, totalScore = List.length plates }
             , Cmd.none
             )
+
+        ScoreAnimationEnded _ ->
+            ( { model | isScoreAnimating = False }, Cmd.none )
 
 
 speed : Speed.Speed
@@ -241,7 +303,18 @@ view : Model -> Html Msg
 view model =
     div []
         [ viewPlayfield model
-        , span [ id "score", class "noselect" ] [ text "0" ]
+        , span
+            ([ id "score"
+             , class "noselect"
+             ]
+                ++ (if model.isScoreAnimating then
+                        [ class "animCounterIncrease" ]
+
+                    else
+                        []
+                   )
+            )
+            [ text (String.fromInt model.score ++ "/" ++ String.fromInt model.totalScore) ]
         , input
             [ type_ "button"
             , class "gameButton"
