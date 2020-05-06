@@ -6,7 +6,7 @@ import Direction2d
 import Duration
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (on, preventDefaultOn)
+import Html.Events exposing (on, onClick, preventDefaultOn)
 import Json.Decode as Decode exposing (Decoder, succeed)
 import Labyrinth exposing (..)
 import Length exposing (Meters)
@@ -73,6 +73,20 @@ modelInitialValue size startPoint =
     }
 
 
+initGame : Model -> ( Model, Cmd Msg )
+initGame model =
+    ( { model
+        | score = 0
+        , totalScore = 0
+        , modelViewProjectionMatrix = getModelViewProjectionMatrix (toFloat model.width / toFloat model.height) getStartingPoint
+        , currentPosition = getStartingPoint
+        , translationMatrix = getTranslationMatrix getStartingPoint
+        , target = Nothing
+      }
+    , Random.generate MazeGenerated (doorwayGenerator gridWidth gridHeight)
+    )
+
+
 gridWidth : Int
 gridWidth =
     3
@@ -97,9 +111,8 @@ getStartingPoint =
 
 init : WindowSize -> ( Model, Cmd Msg )
 init size =
-    ( modelInitialValue size getStartingPoint
-    , Random.generate MazeGenerated (doorwayGenerator gridWidth gridHeight)
-    )
+    modelInitialValue size getStartingPoint
+        |> initGame
 
 
 type Msg
@@ -110,6 +123,7 @@ type Msg
     | MazeGenerated (List ( Bool, Bool ))
     | PlatesPlaced (List Plate)
     | ScoreAnimationEnded ()
+    | NewGame
 
 
 updateAspectRatio : Int -> Int -> Model -> Model
@@ -249,6 +263,9 @@ update msg model =
         ScoreAnimationEnded _ ->
             ( { model | isScoreAnimating = False }, Cmd.none )
 
+        NewGame ->
+            initGame model
+
 
 speed : Speed.Speed
 speed =
@@ -299,6 +316,11 @@ alwaysPreventDefault msg =
     ( msg, True )
 
 
+isGameWon : Model -> Bool
+isGameWon model =
+    model.score == model.totalScore && model.totalScore > 0
+
+
 view : Model -> Html Msg
 view model =
     div []
@@ -323,8 +345,27 @@ view model =
             , disabled True
             ]
             []
-        , div [ class "disabler" ] []
-        , div [ class "splashScreen", id "victoryScreen", style "display" "none" ]
+        , div
+            (class "disabler"
+                :: (if isGameWon model then
+                        [ style "display" "block" ]
+
+                    else
+                        []
+                   )
+            )
+            []
+        , div
+            ([ class "splashScreen"
+             , id "victoryScreen"
+             ]
+                ++ (if isGameWon model then
+                        []
+
+                    else
+                        [ style "display" "none" ]
+                   )
+            )
             [ div [ class "splashTitle" ] [ text "Gewonnen" ]
             , div [ class "splashMessage" ] [ text "Du hast alle Quadrate gesammelt." ]
             , input
@@ -332,6 +373,7 @@ view model =
                 , class "splashButton"
                 , value "Neues Spiel"
                 , id "btnNewGame"
+                , onClick NewGame
                 ]
                 []
             ]
