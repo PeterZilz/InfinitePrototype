@@ -50,10 +50,15 @@ getScreen width height =
     Rectangle2d.from Point2d.origin (Point2d.pixels (toFloat width) (toFloat height))
 
 
+getAspectRatio : ( Quantity Float Pixels, Quantity Float Pixels ) -> Float
+getAspectRatio ( w, h ) =
+    Quantity.in_ Pixels.pixels w / Quantity.in_ Pixels.pixels h
+
+
 toWorld : Rectangle2d Pixels ScreenPixels -> Point2d Meters World -> Int -> Int -> Point2d Meters World
 toWorld screen cameraPosition offsetX offsetY =
     Camera3d.ray
-        (orthographicCamera cameraPosition)
+        (orthographicCamera (Rectangle2d.dimensions screen |> getAspectRatio) cameraPosition)
         screen
         (Point2d.pixels (toFloat offsetX) (toFloat offsetY))
         |> Axis3d.originPoint
@@ -79,11 +84,18 @@ cameraViewpoint cameraPosition =
         }
 
 
-orthographicCamera : Point2d Meters World -> Camera3d.Camera3d Meters World
-orthographicCamera cameraPosition =
+orthographicCamera : Float -> Point2d Meters World -> Camera3d.Camera3d Meters World
+orthographicCamera aspectRatio cameraPosition =
     Camera3d.orthographic
         { viewpoint = cameraViewpoint cameraPosition
-        , viewportHeight = Length.meters 5
+        , viewportHeight =
+            Length.meters
+                (if aspectRatio < 1 then
+                    9
+
+                 else
+                    9 / aspectRatio
+                )
         }
 
 
@@ -103,7 +115,7 @@ getModelViewProjectionMatrix : Float -> Point2d Meters World -> Mat4
 getModelViewProjectionMatrix aspectRatio cameraPosition =
     modelViewProjectionMatrix
         frame
-        (orthographicCamera cameraPosition)
+        (orthographicCamera aspectRatio cameraPosition)
         { aspectRatio = aspectRatio
         , farClipDepth = Quantity.Quantity 100
         , nearClipDepth = Quantity.Quantity 0
