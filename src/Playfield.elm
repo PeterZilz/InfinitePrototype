@@ -1,7 +1,5 @@
 module Playfield exposing
-    ( ScreenPixels
-    , World
-    , avatar
+    ( avatar
     , avatarRadius
     , background
     , getModelViewProjectionMatrix
@@ -24,7 +22,6 @@ import Geometry.Interop.LinearAlgebra.Point2d as Point2d
 import Geometry.Interop.LinearAlgebra.Point3d as Point3d
 import Length exposing (Meters)
 import Math.Matrix4 exposing (Mat4)
-import Math.Vector2 exposing (Vec2)
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
 import Point3d
@@ -35,14 +32,7 @@ import SketchPlane3d exposing (SketchPlane3d)
 import Viewpoint3d exposing (Viewpoint3d)
 import WebGL
 import WebGL.Matrices exposing (modelViewProjectionMatrix)
-
-
-type World
-    = World
-
-
-type ScreenPixels
-    = ScreenPixels
+import WebGLRendering exposing (ScreenPixels, Varyings, Vertex, World, toVertex)
 
 
 getScreen : Int -> Int -> Rectangle2d Pixels ScreenPixels
@@ -139,17 +129,6 @@ avatar modelViewProjectionMatrix translationMatrix =
     WebGL.entity avatarVertexShader avatarFragmentShader avatarMesh (getUniforms modelViewProjectionMatrix translationMatrix)
 
 
-type alias Vertex =
-    { position : Vec2
-    , textcoord : Vec2
-    }
-
-
-toVertex : Point2d Meters World -> Vertex
-toVertex =
-    Point2d.toVec2 >> (\v -> Vertex v v)
-
-
 backgroundMesh : WebGL.Mesh Vertex
 backgroundMesh =
     Rectangle2d.from (Point2d.meters -100 -100) (Point2d.meters 100 100)
@@ -183,11 +162,6 @@ getUniforms : Mat4 -> Mat4 -> Uniforms
 getUniforms modelViewProjectionMatrix translationMatrix =
     { perspective = modelViewProjectionMatrix
     , translation = translationMatrix
-    }
-
-
-type alias Varyings =
-    { vtextcoord : Vec2
     }
 
 

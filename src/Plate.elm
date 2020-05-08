@@ -5,16 +5,16 @@ import Geometry.Interop.LinearAlgebra.Vector2d as Vector2d
 import Labyrinth exposing (cellCenter, triangulateRect)
 import Length exposing (Meters)
 import Math.Matrix4 exposing (Mat4)
-import Math.Vector2 exposing (Vec2)
 import Math.Vector3 exposing (vec3)
 import Math.Vector4 exposing (Vec4, vec4)
-import Playfield exposing (World, avatarRadius)
+import Playfield exposing (avatarRadius)
 import Point2d
 import Random exposing (Generator)
 import Rectangle2d exposing (Rectangle2d)
 import Vector2d exposing (Vector2d)
 import WebGL
 import WebGL.Settings.Blend as Blend
+import WebGLRendering exposing (Vertex, World)
 
 
 plateGenerator : Int -> Int -> Int -> Generator (List Plate)
@@ -70,11 +70,6 @@ plateMesh : WebGL.Mesh Vertex
 plateMesh =
     triangulateRect plateModel
         |> WebGL.triangles
-
-
-type alias Vertex =
-    { position : Vec2
-    }
 
 
 type alias Uniforms =

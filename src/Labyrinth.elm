@@ -6,15 +6,14 @@ import Geometry.Interop.LinearAlgebra.Point2d as Point2d
 import Length exposing (Meters)
 import LineSegment2d exposing (LineSegment2d)
 import Math.Matrix4 exposing (Mat4)
-import Math.Vector2 exposing (Vec2)
 import Math.Vector4 exposing (Vec4)
-import Playfield exposing (World)
 import Point2d exposing (Point2d)
 import Random exposing (Generator)
 import Rectangle2d exposing (Rectangle2d)
 import Vector2d exposing (Vector2d)
 import WebGL
 import WebGL.Settings.Blend as Blend
+import WebGLRendering exposing (Vertex, World, toVertex)
 
 
 connectionGenerator : Generator Bool
@@ -62,18 +61,8 @@ toCells =
     List.map cell
 
 
-type alias Vertex =
-    { position : Vec2
-    }
-
-
 type alias Wall =
     Rectangle2d Meters World
-
-
-toVertex : Point2d Meters World -> Vertex
-toVertex =
-    Point2d.toVec2 >> Vertex
 
 
 thickness : Float
@@ -387,7 +376,7 @@ wallsFragmentShader =
 
 walls : WebGL.Mesh Vertex -> Vec4 -> Mat4 -> WebGL.Entity
 walls mesh color modelViewProjectionMatrix =
-    WebGL.entityWith 
+    WebGL.entityWith
         [ Blend.add Blend.srcAlpha Blend.oneMinusSrcAlpha ]
         wallsVertexShader
         wallsFragmentShader

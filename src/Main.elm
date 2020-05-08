@@ -2,8 +2,8 @@ module Main exposing (Model, Msg, init, main, subscriptions, update, view)
 
 import Browser
 import Browser.Events as BE
-import Direction2d
 import Duration
+import Game exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (on, onClick, preventDefaultOn)
@@ -11,22 +11,19 @@ import Json.Decode as Decode exposing (Decoder, succeed)
 import Labyrinth exposing (..)
 import Length exposing (Meters)
 import Math.Matrix4 exposing (Mat4)
-import Math.Vector4 exposing (Vec4, vec4)
 import Pixels exposing (Pixels)
 import Plate exposing (..)
 import Playfield exposing (..)
 import Point2d exposing (Point2d)
 import Process
-import Quantity exposing (lessThanOrEqualTo)
 import Random
 import Rectangle2d exposing (Rectangle2d)
-import Speed
 import Task
-import Vector2d
 import WebGL
+import WebGLRendering exposing (ScreenPixels, World)
 
 
-main : Program WindowSize Model Msg
+main : Program WindowSizeFlags Model Msg
 main =
     Browser.element
         { init = init
@@ -36,7 +33,7 @@ main =
         }
 
 
-type alias WindowSize =
+type alias WindowSizeFlags =
     { width : Int
     , height : Int
     }
@@ -57,12 +54,6 @@ type alias Model =
     , isScoreAnimating : Bool
     , ghosting : GhostingStatus
     }
-
-
-type GhostingStatus
-    = OnCooldown
-    | Available
-    | Ongoing
 
 
 modelInitialValue size startPoint =
@@ -96,31 +87,12 @@ initGame model =
     , Cmd.batch
         [ Random.generate MazeGenerated (doorwayGenerator gridWidth gridHeight)
         , Random.generate PlatesPlaced (plateGenerator gridWidth gridHeight totalPlates)
-        , delayedActivateGhosting
+        , setTimeout ghostCooldown GhostingCoolDownEnded
         ]
     )
 
 
-gridWidth : Int
-gridWidth =
-    17
-
-
-gridHeight : Int
-gridHeight =
-    17
-
-
-totalPlates : Int
-totalPlates =
-    20
-
-
-getStartingPoint =
-    Point2d.translateBy (cellCenter ( gridWidth // 2, gridHeight // 2 )) Point2d.origin
-
-
-init : WindowSize -> ( Model, Cmd Msg )
+init : WindowSizeFlags -> ( Model, Cmd Msg )
 init size =
     modelInitialValue size getStartingPoint
         |> initGame
@@ -150,12 +122,6 @@ updateAspectRatio w h model =
     }
 
 
-pixelToWorld : Model -> Int -> Int -> Point2d Meters World
-pixelToWorld model x y =
-    -- not sure, why the inversion of the y-coordinate is necessary
-    toWorld model.screen model.currentPosition x (model.height - y)
-
-
 updateCurrentPosition : Point2d Meters World -> Model -> Model
 updateCurrentPosition newPosition model =
     { model
@@ -166,54 +132,10 @@ updateCurrentPosition newPosition model =
     }
 
 
-enteredTriggerArea : Point2d Meters World -> Plate -> Maybe Plate
-enteredTriggerArea position area =
-    if Rectangle2d.contains position area.triggerArea then
-        Just area
-
-    else
-        Nothing
-
-
-getEnteredTriggerAreas : Point2d Meters World -> List Plate -> List Plate
-getEnteredTriggerAreas position plates =
-    List.filterMap (enteredTriggerArea position) plates
-
-
-{-| The time the score animation takes in ms.
-Has to be consistent with the css class "animCounterIncrease".
--}
-scoreAnimationDuration : Float
-scoreAnimationDuration =
-    400
-
-
-ghostDuration : Float
-ghostDuration =
-    2000
-
-
-ghostCooldown : Float
-ghostCooldown =
-    10000
-
-
-delayedEndScoreAnimation : Cmd Msg
-delayedEndScoreAnimation =
-    Process.sleep scoreAnimationDuration
-        |> Task.perform ScoreAnimationEnded
-
-
-delayedEndGhosting : Cmd Msg
-delayedEndGhosting =
-    Process.sleep ghostDuration
-        |> Task.perform EndGhosting
-
-
-delayedActivateGhosting : Cmd Msg
-delayedActivateGhosting =
-    Process.sleep ghostCooldown
-        |> Task.perform GhostingCoolDownEnded
+setTimeout : Float -> (() -> msg) -> Cmd msg
+setTimeout pause m =
+    Process.sleep pause
+        |> Task.perform m
 
 
 processPlateAreas : Point2d Meters World -> Model -> Model
@@ -233,7 +155,7 @@ processPlateAreas newPosition model =
 handleEndOfScoreAnimation : Bool -> Model -> Cmd Msg
 handleEndOfScoreAnimation wasAnimating m =
     if not wasAnimating && m.isScoreAnimating then
-        delayedEndScoreAnimation
+        setTimeout scoreAnimationDuration ScoreAnimationEnded
 
     else
         Cmd.none
@@ -250,28 +172,6 @@ moveToNewPosition newPosition model =
             |> (\m -> ( m, handleEndOfScoreAnimation model.isScoreAnimating m ))
 
 
-updateTarget : Maybe (Point2d Meters World) -> Point2d Meters World -> Maybe (Point2d Meters World)
-updateTarget target newPosition =
-    case target of
-        Nothing ->
-            target
-
-        Just t ->
-            if t == newPosition then
-                Nothing
-
-            else
-                target
-
-
-generateMaze : Int -> Int -> List ( Bool, Bool ) -> Maze
-generateMaze width height randomValues =
-    { width = width
-    , height = height
-    , data = Just (createMaze width height randomValues)
-    }
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -284,7 +184,8 @@ update msg model =
             )
 
         TargetSelected x y ->
-            ( { model | target = Just (pixelToWorld model x y) }, Cmd.none )
+            -- not sure, why the inversion of the y-coordinate is necessary
+            ( { model | target = Just (toWorld model.screen model.currentPosition x (model.height - y)) }, Cmd.none )
 
         NewPosition pos ->
             moveToNewPosition pos model
@@ -306,39 +207,13 @@ update msg model =
             initGame model
 
         StartGhosting ->
-            ( { model | ghosting = Ongoing }, delayedEndGhosting )
+            ( { model | ghosting = Ongoing }, setTimeout ghostDuration EndGhosting )
 
         EndGhosting _ ->
-            ( { model | ghosting = OnCooldown }, delayedActivateGhosting )
+            ( { model | ghosting = OnCooldown }, setTimeout ghostCooldown GhostingCoolDownEnded )
 
         GhostingCoolDownEnded _ ->
             ( { model | ghosting = Available }, Cmd.none )
-
-
-speed : Speed.Speed
-speed =
-    Speed.metersPerSecond 10
-
-
-moveTowards : Point2d Meters World -> Point2d Meters World -> Duration.Duration -> Point2d Meters World
-moveTowards target current tDelta =
-    let
-        dist =
-            Point2d.distanceFrom target current
-
-        stepSize =
-            Quantity.at speed tDelta
-    in
-    if lessThanOrEqualTo stepSize dist then
-        target
-
-    else
-        Point2d.translateBy
-            (Direction2d.from current target
-                |> Maybe.map (Vector2d.withLength stepSize)
-                |> Maybe.withDefault Vector2d.zero
-            )
-            current
 
 
 subscriptions : Model -> Sub Msg
@@ -362,6 +237,13 @@ preventContextMenu msg =
 alwaysPreventDefault : msg -> ( msg, Bool )
 alwaysPreventDefault msg =
     ( msg, True )
+
+
+offsetDecoder : (Int -> Int -> msg) -> Decoder msg
+offsetDecoder event =
+    Decode.map2 event
+        (Decode.field "offsetX" Decode.int)
+        (Decode.field "offsetY" Decode.int)
 
 
 isGameWon : Model -> Bool
@@ -429,16 +311,6 @@ view model =
         ]
 
 
-getWallColor : GhostingStatus -> Vec4
-getWallColor ghosting =
-    case ghosting of
-        Ongoing ->
-            vec4 (0xEE / 0xFF) (0xEE / 0xFF) (0xEE / 0xFF) (0x30 / 0xFF)
-
-        _ ->
-            vec4 (0x10 / 0xFF) (0x10 / 0xFF) (0x10 / 0xFF) 1
-
-
 viewPlayfield : Model -> Html Msg
 viewPlayfield model =
     WebGL.toHtmlWith
@@ -447,7 +319,7 @@ viewPlayfield model =
         , preventContextMenu DoNothing
         , width model.width
         , height model.height
-        , onPlayfieldMouseUp
+        , on "mouseup" (offsetDecoder TargetSelected)
         ]
         (case model.maze.data of
             Nothing ->
@@ -461,15 +333,3 @@ viewPlayfield model =
                     ++ [ avatar model.modelViewProjectionMatrix model.translationMatrix
                        ]
         )
-
-
-offsetDecoder : (Int -> Int -> msg) -> Decoder msg
-offsetDecoder event =
-    Decode.map2 event
-        (Decode.field "offsetX" Decode.int)
-        (Decode.field "offsetY" Decode.int)
-
-
-onPlayfieldMouseUp : Attribute Msg
-onPlayfieldMouseUp =
-    on "mouseup" (offsetDecoder TargetSelected)
