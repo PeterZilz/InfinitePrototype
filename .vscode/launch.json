@@ -7,21 +7,14 @@
         {
             "type": "chrome",
             "request": "launch",
-            "name": "Launch vanilla (file)",
-            "url": "file:///home/peter/programmieren/InfinitePrototype/dist/index.html",
-            "webRoot": "${workspaceFolder}"
-        },
-        {
-            "type": "chrome",
-            "request": "launch",
-            "name": "Launch Elm (file)",
+            "name": "Launch from file",
             "url": "file:///home/peter/programmieren/InfinitePrototype/static/index.html",
             "webRoot": "${workspaceFolder}"
         },
         {
             "type": "chrome",
             "request": "launch",
-            "name": "Launch Elm (reactor)",
+            "name": "Launch from Reactor",
             "url": "http://localhost:8000/static/index.html",
             "webRoot": "${workspaceFolder}"
         }
