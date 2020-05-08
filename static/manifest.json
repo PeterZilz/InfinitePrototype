@@ -19,6 +19,11 @@
             "src": "favicon144.png",
             "type": "image/png",
             "sizes": "144x144"
+        },
+        {
+            "src": "favicon.svg",
+            "type": "image/svg+xml",
+            "sizes": "any"
         }
     ],
     "start_url": "index.html"

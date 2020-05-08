@@ -17,6 +17,13 @@
             "name": "Launch Elm (file)",
             "url": "file:///home/peter/programmieren/InfinitePrototype/static/index.html",
             "webRoot": "${workspaceFolder}"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Launch Elm (reactor)",
+            "url": "http://localhost:8000/static/index.html",
+            "webRoot": "${workspaceFolder}"
         }
     ]
 }

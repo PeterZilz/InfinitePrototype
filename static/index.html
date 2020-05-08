@@ -10,6 +10,10 @@
     <meta property="og:url" content="https://infinity.synoikos.de/InfinitePrototype/index.html" />
     <meta property="og:image" content="https://infinity.synoikos.de/InfinitePrototype/infinitePreview.png" />
 
+    <!-- Chrome, Firefox OS and Opera -->
+    <meta name="theme-color" content="#202020">
+    <!-- Safari -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <link rel="icon" href="favicon32.png" type="image/png" sizes="32x32">
     <link rel="icon" href="favicon96.png" type="image/png" sizes="96x96">
@@ -27,6 +31,23 @@
 <body>
     <div id="app"></div>
     <script type="text/javascript">
+        // install service worker
+        if("serviceWorker" in navigator)
+        {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("service-worker.js")
+                .then(registration => {
+                    // registration successful
+                    console.log("service worker successfully registered for: " + registration.scope);
+                }, err => {
+                    console.log("Could not register: ", err);
+                });
+            });
+        }
+        else {
+            console.log("service worker is not available :(");
+        }
+
         const app = Elm.Main.init({
             node: document.getElementById("app"),
             flags: {

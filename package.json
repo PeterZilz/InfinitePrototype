@@ -14,6 +14,7 @@
   "scripts": {
     "build-elm": "./build-elm.sh",
     "optimize-elm": "./optimize-elm.sh",
+    "reactor": "elm reactor",
     "watch-elm": "npm-watch"
   },
   "repository": {
