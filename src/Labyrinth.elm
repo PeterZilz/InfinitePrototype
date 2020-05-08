@@ -7,13 +7,14 @@ import Length exposing (Meters)
 import LineSegment2d exposing (LineSegment2d)
 import Math.Matrix4 exposing (Mat4)
 import Math.Vector2 exposing (Vec2)
-import Math.Vector4 exposing (Vec4, vec4)
+import Math.Vector4 exposing (Vec4)
 import Playfield exposing (World)
 import Point2d exposing (Point2d)
 import Random exposing (Generator)
 import Rectangle2d exposing (Rectangle2d)
 import Vector2d exposing (Vector2d)
 import WebGL
+import WebGL.Settings.Blend as Blend
 
 
 connectionGenerator : Generator Bool
@@ -353,10 +354,10 @@ type alias Uniforms =
     }
 
 
-getUniforms : Mat4 -> Uniforms
-getUniforms modelViewProjectionMatrix =
+getUniforms : Vec4 -> Mat4 -> Uniforms
+getUniforms color modelViewProjectionMatrix =
     { perspective = modelViewProjectionMatrix
-    , color = vec4 0 0 0 0
+    , color = color
     }
 
 
@@ -367,7 +368,7 @@ wallsVertexShader =
         uniform mat4 perspective;
 
         void main () {
-            gl_Position = perspective * vec4(position, 0., 1.0);
+            gl_Position = perspective * vec4(position, 0.1, 1.0);
         }
     |]
 
@@ -384,6 +385,11 @@ wallsFragmentShader =
     |]
 
 
-walls : WebGL.Mesh Vertex -> Mat4 -> WebGL.Entity
-walls mesh modelViewProjectionMatrix =
-    WebGL.entity wallsVertexShader wallsFragmentShader mesh (getUniforms modelViewProjectionMatrix)
+walls : WebGL.Mesh Vertex -> Vec4 -> Mat4 -> WebGL.Entity
+walls mesh color modelViewProjectionMatrix =
+    WebGL.entityWith 
+        [ Blend.add Blend.srcAlpha Blend.oneMinusSrcAlpha ]
+        wallsVertexShader
+        wallsFragmentShader
+        mesh
+        (getUniforms color modelViewProjectionMatrix)

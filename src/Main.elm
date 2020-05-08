@@ -11,6 +11,7 @@ import Json.Decode as Decode exposing (Decoder, succeed)
 import Labyrinth exposing (..)
 import Length exposing (Meters)
 import Math.Matrix4 exposing (Mat4)
+import Math.Vector4 exposing (Vec4, vec4)
 import Pixels exposing (Pixels)
 import Plate exposing (..)
 import Playfield exposing (..)
@@ -54,7 +55,14 @@ type alias Model =
     , score : Int
     , totalScore : Int
     , isScoreAnimating : Bool
+    , ghosting : GhostingStatus
     }
+
+
+type GhostingStatus
+    = OnCooldown
+    | Available
+    | Ongoing
 
 
 modelInitialValue size startPoint =
@@ -70,6 +78,7 @@ modelInitialValue size startPoint =
     , score = 0
     , totalScore = 0
     , isScoreAnimating = False
+    , ghosting = Available
     }
 
 
@@ -82,27 +91,29 @@ initGame model =
         , currentPosition = getStartingPoint
         , translationMatrix = getTranslationMatrix getStartingPoint
         , target = Nothing
+        , ghosting = OnCooldown
       }
-    , Random.generate MazeGenerated (doorwayGenerator gridWidth gridHeight)
+    , Cmd.batch
+        [ Random.generate MazeGenerated (doorwayGenerator gridWidth gridHeight)
+        , Random.generate PlatesPlaced (plateGenerator gridWidth gridHeight totalPlates)
+        , delayedActivateGhosting
+        ]
     )
 
 
 gridWidth : Int
 gridWidth =
-    3
-
-
-
--- 17
+    17
 
 
 gridHeight : Int
 gridHeight =
-    3
+    17
 
 
-
--- 17
+totalPlates : Int
+totalPlates =
+    20
 
 
 getStartingPoint =
@@ -124,6 +135,9 @@ type Msg
     | PlatesPlaced (List Plate)
     | ScoreAnimationEnded ()
     | NewGame
+    | StartGhosting
+    | EndGhosting ()
+    | GhostingCoolDownEnded ()
 
 
 updateAspectRatio : Int -> Int -> Model -> Model
@@ -174,10 +188,32 @@ scoreAnimationDuration =
     400
 
 
+ghostDuration : Float
+ghostDuration =
+    2000
+
+
+ghostCooldown : Float
+ghostCooldown =
+    10000
+
+
 delayedEndScoreAnimation : Cmd Msg
 delayedEndScoreAnimation =
     Process.sleep scoreAnimationDuration
         |> Task.perform ScoreAnimationEnded
+
+
+delayedEndGhosting : Cmd Msg
+delayedEndGhosting =
+    Process.sleep ghostDuration
+        |> Task.perform EndGhosting
+
+
+delayedActivateGhosting : Cmd Msg
+delayedActivateGhosting =
+    Process.sleep ghostCooldown
+        |> Task.perform GhostingCoolDownEnded
 
 
 processPlateAreas : Point2d Meters World -> Model -> Model
@@ -194,21 +230,24 @@ processPlateAreas newPosition model =
             }
 
 
+handleEndOfScoreAnimation : Bool -> Model -> Cmd Msg
+handleEndOfScoreAnimation wasAnimating m =
+    if not wasAnimating && m.isScoreAnimating then
+        delayedEndScoreAnimation
+
+    else
+        Cmd.none
+
+
 moveToNewPosition : Point2d Meters World -> Model -> ( Model, Cmd Msg )
 moveToNewPosition newPosition model =
-    if wouldCrossAnyWall model.maze model.currentPosition newPosition then
+    if model.ghosting /= Ongoing && wouldCrossAnyWall model.maze model.currentPosition newPosition then
         ( { model | target = Nothing }, Cmd.none )
 
     else
         updateCurrentPosition newPosition model
             |> processPlateAreas newPosition
-            |> (\m ->
-                    if not model.isScoreAnimating && m.isScoreAnimating then
-                        ( m, delayedEndScoreAnimation )
-
-                    else
-                        ( m, Cmd.none )
-               )
+            |> (\m -> ( m, handleEndOfScoreAnimation model.isScoreAnimating m ))
 
 
 updateTarget : Maybe (Point2d Meters World) -> Point2d Meters World -> Maybe (Point2d Meters World)
@@ -252,7 +291,7 @@ update msg model =
 
         MazeGenerated bools ->
             ( { model | maze = generateMaze model.maze.width model.maze.height bools }
-            , Random.generate PlatesPlaced (plateGenerator gridWidth gridHeight 1)
+            , Cmd.none
             )
 
         PlatesPlaced plates ->
@@ -265,6 +304,15 @@ update msg model =
 
         NewGame ->
             initGame model
+
+        StartGhosting ->
+            ( { model | ghosting = Ongoing }, delayedEndGhosting )
+
+        EndGhosting _ ->
+            ( { model | ghosting = OnCooldown }, delayedActivateGhosting )
+
+        GhostingCoolDownEnded _ ->
+            ( { model | ghosting = Available }, Cmd.none )
 
 
 speed : Speed.Speed
@@ -342,7 +390,8 @@ view model =
             , class "gameButton"
             , id "btnGhost"
             , value "Geistern"
-            , disabled True
+            , disabled (model.ghosting /= Available)
+            , onClick StartGhosting
             ]
             []
         , div
@@ -380,6 +429,16 @@ view model =
         ]
 
 
+getWallColor : GhostingStatus -> Vec4
+getWallColor ghosting =
+    case ghosting of
+        Ongoing ->
+            vec4 (0xEE / 0xFF) (0xEE / 0xFF) (0xEE / 0xFF) (0x30 / 0xFF)
+
+        _ ->
+            vec4 (0x10 / 0xFF) (0x10 / 0xFF) (0x10 / 0xFF) 1
+
+
 viewPlayfield : Model -> Html Msg
 viewPlayfield model =
     WebGL.toHtmlWith
@@ -395,8 +454,8 @@ viewPlayfield model =
                 []
 
             Just mazeData ->
-                [ walls mazeData.wallMesh model.modelViewProjectionMatrix
-                , background model.modelViewProjectionMatrix model.translationMatrix
+                [ background model.modelViewProjectionMatrix model.translationMatrix
+                , walls mazeData.wallMesh (getWallColor model.ghosting) model.modelViewProjectionMatrix
                 ]
                     ++ List.map (plate model.modelViewProjectionMatrix) model.plates
                     ++ [ avatar model.modelViewProjectionMatrix model.translationMatrix
