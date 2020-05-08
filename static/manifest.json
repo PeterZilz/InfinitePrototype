@@ -3,7 +3,7 @@
     "name": "Infinite Prototype",
     "background_color": "#202020",
     "theme_color": "#202020",
-    "display": "standalone",
+    "display": "fullscreen",
     "icons": [
         {
             "src": "favicon32.png",

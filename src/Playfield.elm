@@ -241,7 +241,7 @@ avatarFragmentShader =
 backgroundFragmentShader : WebGL.Shader {} Uniforms Varyings
 backgroundFragmentShader =
     [glsl|
-        precision mediump float;
+        precision highp float;
         const vec4 color1 = vec4(0.,float(0x3f)/255.,float(0x72)/255., 1.);
         const vec4 color2 = vec4(0.,float(0x69)/255.,float(0xbe)/255., 1.);
         const float width = 2.;
